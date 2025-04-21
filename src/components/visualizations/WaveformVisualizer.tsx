@@ -1,8 +1,9 @@
+
 import { useEffect, useRef } from 'react';
 
 interface WaveformVisualizerProps {
   data: number[];
-  width?: number;
+  width?: number | string;
   height?: number;
   color?: string;
 }
@@ -21,20 +22,23 @@ const WaveformVisualizer = ({
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+    
+    // Get actual width value for calculations
+    const canvasWidth = typeof width === 'number' ? width : canvas.clientWidth;
 
     // Clear canvas
-    ctx.clearRect(0, 0, width, height);
+    ctx.clearRect(0, 0, canvasWidth, height);
 
     // Draw background
     ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, canvasWidth, height);
 
     // Draw waveform
     ctx.beginPath();
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
 
-    const sliceWidth = width / data.length;
+    const sliceWidth = canvasWidth / data.length;
     let x = 0;
 
     ctx.moveTo(x, height / 2);
@@ -45,7 +49,7 @@ const WaveformVisualizer = ({
       x += sliceWidth;
     });
 
-    ctx.lineTo(width, height / 2);
+    ctx.lineTo(canvasWidth, height / 2);
     ctx.stroke();
 
   }, [data, width, height, color]);
@@ -53,9 +57,10 @@ const WaveformVisualizer = ({
   return (
     <canvas
       ref={canvasRef}
-      width={width}
+      width={typeof width === 'number' ? width : "100%"}
       height={height}
       className="rounded-sm"
+      style={{ width: typeof width === 'string' ? width : undefined }}
     />
   );
 };

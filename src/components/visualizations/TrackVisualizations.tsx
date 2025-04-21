@@ -13,9 +13,6 @@ const TrackVisualizations = ({ track, onPlayClick }: TrackVisualizationsProps) =
     ? track.waveform 
     : Array.from({ length: 50 }, () => Math.random() * 0.8);
 
-  // Calculate width based on whether the input monitor is active
-  const waveformWidth = track.inputMonitor ? 'calc(100% - 28px)' : '100%';
-
   return (
     <div className="flex mb-4 h-20 items-end space-x-2">
       {track.inputMonitor && (
