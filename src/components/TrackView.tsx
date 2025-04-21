@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Track as TrackType, SessionTemplate } from '@/types';
 import Track from './Track';
@@ -35,6 +36,7 @@ import { useTransportState } from '@/hooks/useTransportState';
 import { useSessionState } from '@/hooks/useSessionState';
 import { useExportState } from '@/hooks/useExportState';
 import { useSuggestions } from '@/hooks/useSuggestions';
+import MarketplaceButton from './MarketplaceButton';
 
 interface TrackViewProps {
   sessionTemplate: SessionTemplate;
@@ -279,6 +281,8 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
           </div>
           
           <div className="flex gap-2">
+            <MarketplaceButton />
+            
             <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="border-fever-light/20 bg-fever-dark flex gap-2">
