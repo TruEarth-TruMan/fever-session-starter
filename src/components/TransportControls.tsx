@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, SkipBack, Music } from 'lucide-react';
+import { Play, Pause, SkipBack, Music, FastForward, Rewind } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TransportControlsProps {
@@ -11,6 +11,8 @@ interface TransportControlsProps {
   onPlay: () => void;
   onStop: () => void;
   onMetronome: () => void;
+  onSkipBackward?: () => void;
+  onSkipForward?: () => void;
 }
 
 const TransportControls = ({ 
@@ -19,7 +21,9 @@ const TransportControls = ({
   onRecord, 
   onPlay, 
   onStop, 
-  onMetronome 
+  onMetronome,
+  onSkipBackward = () => console.log('Skip back 5s'),
+  onSkipForward = () => console.log('Skip forward 10s')
 }: TransportControlsProps) => {
   const [metronomeActive, setMetronomeActive] = useState(false);
   
@@ -32,6 +36,24 @@ const TransportControls = ({
     <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-fever-black to-transparent p-4">
       <div className="container max-w-4xl mx-auto">
         <div className="flex justify-center items-center gap-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="w-8 h-8 rounded-full border-fever-light/20 bg-fever-dark"
+                  onClick={onSkipBackward}
+                >
+                  <Rewind className="h-3 w-3 text-fever-light" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Skip Back 5s</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -116,6 +138,24 @@ const TransportControls = ({
               </TooltipTrigger>
               <TooltipContent>
                 <p>Toggle Metronome</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="w-8 h-8 rounded-full border-fever-light/20 bg-fever-dark"
+                  onClick={onSkipForward}
+                >
+                  <FastForward className="h-3 w-3 text-fever-light" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Skip Forward 10s</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
