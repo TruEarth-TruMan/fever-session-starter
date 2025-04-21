@@ -13,13 +13,18 @@ import { useAudioEngine } from '@/hooks/useAudioEngine';
 // Declare the electron global type
 declare global {
   interface Window {
-    electron?: {
+    electron: {
       detectAudioInterfaces: () => Promise<{
         id: string;
         name: string;
         type: 'input' | 'output';
         isScarlettInterface: boolean;
       }[]>;
+      initializeAudio: (deviceId: string) => Promise<boolean>;
+      startRecording: () => boolean;
+      stopRecording: () => Promise<Blob>;
+      getInputLevel: () => Promise<number>;
+      cleanup: () => void;
     };
   }
 }
