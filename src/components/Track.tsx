@@ -4,8 +4,9 @@ import { Track as TrackType } from '@/types';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
-import { VolumeX, Volume2, Maximize2 } from 'lucide-react';
-import FXChain from './FXChain';
+import { VolumeX, Volume2, Maximize2, Music, SlidersHorizontal, Pencil } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 interface TrackProps {
   track: TrackType;
@@ -16,6 +17,8 @@ interface TrackProps {
   onInputMonitorToggle?: (trackId: string) => void;
   onFXChange?: (trackId: string, fxId: string, param: string, value: number) => void;
   onFXToggle?: (trackId: string, fxId: string) => void;
+  onNameChange?: (trackId: string, name: string) => void;
+  onFXDrawerOpen?: (track: TrackType) => void;
 }
 
 const Track = ({ 
@@ -26,9 +29,13 @@ const Track = ({
   onSoloToggle,
   onInputMonitorToggle,
   onFXChange,
-  onFXToggle
+  onFXToggle,
+  onNameChange,
+  onFXDrawerOpen
 }: TrackProps) => {
   const [expanded, setExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [trackName, setTrackName] = useState(track.name);
   
   // Generate some random waveform data if none exists
   const waveformData = track.waveform && track.waveform.length > 0 
@@ -64,16 +71,37 @@ const Track = ({
       onInputMonitorToggle(track.id);
     }
   };
-  
-  const handleFXChange = (fxId: string, param: string, value: number) => {
-    if (onFXChange) {
-      onFXChange(track.id, fxId, param, value);
+
+  const handleFXClick = () => {
+    if (onFXDrawerOpen) {
+      onFXDrawerOpen(track);
+    }
+  };
+
+  const handleNameChange = () => {
+    if (onNameChange && trackName.trim() !== '') {
+      onNameChange(track.id, trackName);
+      setIsEditing(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameChange();
+    } else if (e.key === 'Escape') {
+      setTrackName(track.name);
+      setIsEditing(false);
     }
   };
   
-  const handleFXToggle = (fxId: string) => {
-    if (onFXToggle) {
-      onFXToggle(track.id, fxId);
+  const getTrackIcon = () => {
+    // Return appropriate icon based on track type
+    switch(track.type.toLowerCase()) {
+      case 'drums':
+      case 'percussion':
+        return <Music className="h-4 w-4" style={{ color: track.color }} />;
+      default:
+        return <Music className="h-4 w-4" style={{ color: track.color }} />;
     }
   };
   
@@ -82,22 +110,58 @@ const Track = ({
       <div className="flex flex-col">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2">
-            <span className="font-space font-bold text-sm">{track.name}</span>
+            {getTrackIcon()}
+            
+            {isEditing ? (
+              <Input
+                value={trackName}
+                onChange={(e) => setTrackName(e.target.value)}
+                onBlur={handleNameChange}
+                onKeyDown={handleKeyDown}
+                className="h-6 py-1 px-2 w-32 bg-fever-black/40 border-fever-light/20"
+                autoFocus
+              />
+            ) : (
+              <div className="flex items-center gap-1">
+                <span className="font-space font-bold text-sm">{track.name}</span>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-5 w-5 p-0 hover:bg-fever-dark" 
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+            
             {track.isRecording && (
               <span className="bg-fever-red rounded-full h-2 w-2 animate-pulse"></span>
             )}
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-6 w-6 p-0" 
-            onClick={() => setExpanded(!expanded)}
-          >
-            <Maximize2 className="h-3 w-3" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 hover:bg-fever-dark"
+              onClick={handleFXClick}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 w-7 p-0 hover:bg-fever-dark" 
+              onClick={() => setExpanded(!expanded)}
+            >
+              <Maximize2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         
-        <div className="flex mb-4 h-20 items-end space-x-[1px]">
+        <div className={cn("flex mb-4 h-20 items-end space-x-[1px]", {
+          "bg-fever-black/20": track.muted
+        })}>
           {waveformData.map((height, i) => (
             <div 
               key={`${track.id}-wave-${i}`}
@@ -105,6 +169,7 @@ const Track = ({
               style={{ 
                 height: `${Math.max(5, height * 100)}%`,
                 backgroundColor: track.isRecording ? track.color : undefined,
+                opacity: track.muted ? 0.5 : 1
               }}
             />
           ))}
@@ -168,15 +233,6 @@ const Track = ({
                   checked={track.inputMonitor} 
                   onCheckedChange={handleInputMonitorToggle} 
                   className="data-[state=checked]:bg-fever-blue" 
-                />
-              </div>
-              
-              <div>
-                <h4 className="text-sm font-semibold mb-2">Effects</h4>
-                <FXChain 
-                  fx={track.fx} 
-                  onFXChange={handleFXChange} 
-                  onFXToggle={handleFXToggle} 
                 />
               </div>
             </div>
