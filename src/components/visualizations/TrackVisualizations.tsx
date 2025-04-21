@@ -14,17 +14,17 @@ const TrackVisualizations = ({ track, onPlayClick }: TrackVisualizationsProps) =
     : Array.from({ length: 50 }, () => Math.random() * 0.8);
 
   return (
-    <div className="flex mb-4 h-20 items-end space-x-2">
+    <div className="flex mb-4 h-14 items-end space-x-2">
       {track.inputMonitor && (
         <div className="h-full flex items-center">
-          <AudioMeter level={track.isRecording ? 0.7 : 0} height={80} />
+          <AudioMeter level={track.isRecording ? 0.7 : 0} height={56} />
         </div>
       )}
       
       <div className="flex-1 cursor-pointer" onClick={onPlayClick}>
         <WaveformVisualizer
           data={waveformData}
-          height={80}
+          height={56}
           width="100%"
           color={track.color}
         />

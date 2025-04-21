@@ -56,7 +56,7 @@ const WaveformVisualizer = ({
       ref={canvasRef}
       width={width}
       height={height}
-      className="rounded-sm"
+      className="rounded-sm max-h-14"
     />
   );
 };
