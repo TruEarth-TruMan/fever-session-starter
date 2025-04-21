@@ -1,9 +1,10 @@
-
 import { useState } from 'react';
 import InterfaceDetection from '@/components/InterfaceDetection';
 import SessionLauncher from '@/components/SessionLauncher';
 import TrackView from '@/components/TrackView';
 import { SessionTemplate } from '@/types';
+import FeedbackButton from '@/components/feedback/FeedbackButton';
+import HelpButton from '@/components/help/HelpButton';
 
 const Index = () => {
   const [interfaceDetected, setInterfaceDetected] = useState(false);
@@ -32,10 +33,16 @@ const Index = () => {
       )}
       
       {interfaceDetected && selectedTemplate && (
-        <TrackView 
-          sessionTemplate={selectedTemplate} 
-          onBack={handleBackToSessionLauncher} 
-        />
+        <>
+          <TrackView 
+            sessionTemplate={selectedTemplate} 
+            onBack={handleBackToSessionLauncher} 
+          />
+          <div className="fixed bottom-4 right-4 flex gap-2">
+            <HelpButton />
+            <FeedbackButton />
+          </div>
+        </>
       )}
     </div>
   );
