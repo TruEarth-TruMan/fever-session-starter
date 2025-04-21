@@ -1,4 +1,3 @@
-
 import {
   Dialog,
   DialogContent,
@@ -47,10 +46,10 @@ const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
         <Accordion type="single" collapsible className="w-full">
           {helpTopics.map((topic, index) => (
             <AccordionItem key={index} value={`item-${index}`}>
-              <AccordionTrigger className="text-white/90 hover:text-white font-medium">
+              <AccordionTrigger className="text-white font-semibold hover:text-white/80">
                 {topic.question}
               </AccordionTrigger>
-              <AccordionContent className="text-white/80 hover:text-white text-sm">
+              <AccordionContent className="text-white/90 text-sm hover:text-white">
                 {topic.answer}
               </AccordionContent>
             </AccordionItem>
