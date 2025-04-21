@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Track as TrackType } from '@/types';
 import { Slider } from '@/components/ui/slider';
@@ -7,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { VolumeX, Volume2, Maximize2, Music, SlidersHorizontal, Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useAudioEngine } from '@/hooks/useAudioEngine';
 
 interface TrackProps {
   track: TrackType;
@@ -19,10 +19,12 @@ interface TrackProps {
   onFXToggle?: (trackId: string, fxId: string) => void;
   onNameChange?: (trackId: string, name: string) => void;
   onFXDrawerOpen?: (track: TrackType) => void;
+  audioUrl?: string;
 }
 
 const Track = ({ 
   track,
+  audioUrl,
   onVolumeChange,
   onPanChange,
   onMuteToggle,
@@ -36,8 +38,9 @@ const Track = ({
   const [expanded, setExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [trackName, setTrackName] = useState(track.name);
+  const { playAudio } = useAudioEngine(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   
-  // Generate some random waveform data if none exists
   const waveformData = track.waveform && track.waveform.length > 0 
     ? track.waveform 
     : Array.from({ length: 50 }, () => Math.random() * 0.8);
@@ -95,7 +98,6 @@ const Track = ({
   };
   
   const getTrackIcon = () => {
-    // Return appropriate icon based on track type
     switch(track.type.toLowerCase()) {
       case 'drums':
       case 'percussion':
@@ -105,6 +107,20 @@ const Track = ({
     }
   };
   
+  const handlePlayback = async () => {
+    if (!audioUrl) return;
+    
+    if (!isPlaying) {
+      const source = await playAudio(audioUrl);
+      if (source) {
+        setIsPlaying(true);
+        source.onended = () => {
+          setIsPlaying(false);
+        };
+      }
+    }
+  };
+
   return (
     <div className="track-container" style={{ borderLeft: `4px solid ${track.color}` }}>
       <div className="flex flex-col">
@@ -159,9 +175,7 @@ const Track = ({
           </div>
         </div>
         
-        <div className={cn("flex mb-4 h-20 items-end space-x-[1px]", {
-          "bg-fever-black/20": track.muted
-        })}>
+        <div className="flex mb-4 h-20 items-end space-x-[1px] cursor-pointer" onClick={handlePlayback}>
           {waveformData.map((height, i) => (
             <div 
               key={`${track.id}-wave-${i}`}

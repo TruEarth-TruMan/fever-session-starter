@@ -1,4 +1,3 @@
-
 export type SessionType = 'voice' | 'guitar' | 'podcast' | 'keyboard' | 'band';
 
 export interface SessionTemplate {
@@ -23,6 +22,7 @@ export interface Track {
   fx: Effect[];
   waveform?: number[];
   isRecording?: boolean;
+  audio?: AudioData;
 }
 
 export interface Effect {
@@ -39,4 +39,10 @@ export interface Pack {
   description: string;
   type: string;
   tags: string[];
+}
+
+export interface AudioData {
+  url: string;
+  duration: number;
+  waveform: number[];
 }

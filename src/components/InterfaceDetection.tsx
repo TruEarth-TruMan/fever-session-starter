@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -9,6 +8,7 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useAudioEngine } from '@/hooks/useAudioEngine';
 
 // Declare the electron global type
 declare global {

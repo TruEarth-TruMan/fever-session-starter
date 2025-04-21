@@ -1,10 +1,16 @@
 
 import { useState, useEffect } from 'react';
 
+export interface AudioBlob {
+  blob: Blob;
+  url: string;
+}
+
 export const useAudioEngine = (deviceId: string | null) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [inputLevel, setInputLevel] = useState(0);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -18,6 +24,11 @@ export const useAudioEngine = (deviceId: string | null) => {
         if (success) {
           setIsInitialized(true);
           setError(null);
+          const ctx = new AudioContext({
+            sampleRate: 48000,
+            latencyHint: 'interactive'
+          });
+          setAudioContext(ctx);
 
           // Start monitoring input levels
           levelInterval = setInterval(async () => {
@@ -40,16 +51,19 @@ export const useAudioEngine = (deviceId: string | null) => {
       if (window.electron) {
         window.electron.cleanup();
       }
+      if (audioContext) {
+        audioContext.close();
+      }
     };
   }, [deviceId]);
 
   const startRecording = async () => {
-    if (!window.electron || !isInitialized) return;
-
+    if (!window.electron || !isInitialized) return false;
     const success = window.electron.startRecording();
     if (success) {
       setIsRecording(true);
     }
+    return success;
   };
 
   const stopRecording = async () => {
@@ -58,10 +72,34 @@ export const useAudioEngine = (deviceId: string | null) => {
     try {
       const audioBlob = await window.electron.stopRecording();
       setIsRecording(false);
-      return audioBlob;
+      return {
+        blob: audioBlob,
+        url: URL.createObjectURL(audioBlob)
+      } as AudioBlob;
     } catch (err) {
       console.error('Error stopping recording:', err);
       setError('Error stopping recording');
+      return null;
+    }
+  };
+
+  const playAudio = async (audioUrl: string) => {
+    if (!audioContext) return;
+    
+    try {
+      const response = await fetch(audioUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+      
+      return source;
+    } catch (err) {
+      console.error('Error playing audio:', err);
+      setError('Error playing audio');
       return null;
     }
   };
@@ -72,6 +110,7 @@ export const useAudioEngine = (deviceId: string | null) => {
     inputLevel,
     error,
     startRecording,
-    stopRecording
+    stopRecording,
+    playAudio
   };
 };
