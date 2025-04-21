@@ -39,18 +39,18 @@ const helpTopics = [
 const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md bg-fever-dark/95">
         <DialogHeader>
-          <DialogTitle>Quick Start Guide</DialogTitle>
+          <DialogTitle className="text-white">Quick Start Guide</DialogTitle>
         </DialogHeader>
 
         <Accordion type="single" collapsible className="w-full">
           {helpTopics.map((topic, index) => (
             <AccordionItem key={index} value={`item-${index}`}>
-              <AccordionTrigger className="text-white font-bold hover:text-white/80">
+              <AccordionTrigger className="text-gray-100 font-bold hover:text-white transition-colors">
                 {topic.question}
               </AccordionTrigger>
-              <AccordionContent className="text-white/95 text-sm">
+              <AccordionContent className="text-gray-300 text-sm">
                 {topic.answer}
               </AccordionContent>
             </AccordionItem>
