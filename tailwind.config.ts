@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,15 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Fever custom colors
+				fever: {
+					red: '#E63946',
+					black: '#1D3557',
+					amber: '#FCBF49',
+					blue: '#A8DADC',
+					light: '#F1FAEE',
+					dark: '#2B2D42',
 				}
 			},
 			borderRadius: {
@@ -84,11 +94,39 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-recording': {
+					'0%, 100%': {
+						opacity: '1',
+					},
+					'50%': {
+						opacity: '0.5',
+					},
+				},
+				'waveform': {
+					'0%, 100%': {
+						height: '40%',
+					},
+					'25%': {
+						height: '80%',
+					},
+					'50%': {
+						height: '60%',
+					},
+					'75%': {
+						height: '90%',
+					},
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-recording': 'pulse-recording 2s ease-in-out infinite',
+				'waveform': 'waveform 1.5s ease infinite',
+			},
+			fontFamily: {
+				'poppins': ['Poppins', 'sans-serif'],
+				'space': ['Space Mono', 'monospace'],
 			}
 		}
 	},
