@@ -31,6 +31,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useTransportState } from '@/hooks/useTransportState';
+import { useSessionState } from '@/hooks/useSessionState';
+import { useExportState } from '@/hooks/useExportState';
+import { useSuggestions } from '@/hooks/useSuggestions';
 
 interface TrackViewProps {
   sessionTemplate: SessionTemplate;
@@ -52,6 +56,18 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
   const [loopEnd, setLoopEnd] = useState(30);
   const [isOverdubbing, setIsOverdubbing] = useState(false);
   const [totalDuration, setTotalDuration] = useState(120);
+
+  const { updateTrack, updateTrackFX } = useSessionState(sessionTemplate);
+  const { isRecording: transportIsRecording, isPlaying: transportIsPlaying } = useTransportState();
+  
+  const { dismissSuggestion } = useSuggestions(
+    tracks,
+    transportIsPlaying,
+    transportIsRecording,
+    loopEnabled,
+    updateTrackFX,
+    updateTrack
+  );
 
   const handleVolumeChange = (trackId: string, volume: number) => {
     setTracks(tracks.map(track => 
