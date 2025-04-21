@@ -33,16 +33,21 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
   const [detecting, setDetecting] = useState(true);
   const [detected, setDetected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
   
   useEffect(() => {
     const detectInterfaces = async () => {
       try {
         if (window.electron) {
           const devices = await window.electron.detectAudioInterfaces();
-          const hasScarlettInterface = devices.some(device => device.isScarlettInterface);
-          setDetected(hasScarlettInterface);
+          const scarlettDevice = devices.find(device => device.isScarlettInterface);
+          
+          if (scarlettDevice) {
+            setSelectedDevice(scarlettDevice.id);
+            setDetected(true);
+          }
         } else {
-          // Fallback for web - simulate detection
+          // Fallback for web
           setTimeout(() => {
             setDetected(true);
           }, 2000);
@@ -57,10 +62,14 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
 
     detectInterfaces();
   }, []);
+
+  const { isInitialized, error: audioError } = useAudioEngine(selectedDevice);
   
   const handleContinue = () => {
-    setOpen(false);
-    onDetected();
+    if (isInitialized || !window.electron) {
+      setOpen(false);
+      onDetected();
+    }
   };
   
   return (
@@ -118,4 +127,3 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
 };
 
 export default InterfaceDetection;
-
