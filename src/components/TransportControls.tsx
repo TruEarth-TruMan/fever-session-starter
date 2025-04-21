@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, SkipBack, Record, Music } from 'lucide-react';
+import { Play, Pause, SkipBack, Music } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TransportControlsProps {
@@ -89,7 +89,7 @@ const TransportControls = ({
                   } text-white shadow-lg`}
                   onClick={onRecord}
                 >
-                  <Record className="h-8 w-8" />
+                  <div className="h-8 w-8 rounded-full bg-current"></div>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
