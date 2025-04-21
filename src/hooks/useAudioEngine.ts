@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 
 export interface AudioBlob {
@@ -5,6 +6,7 @@ export interface AudioBlob {
   url: string;
 }
 
+// Move window.electron type declaration to a separate types file
 declare global {
   interface Window {
     electron: {

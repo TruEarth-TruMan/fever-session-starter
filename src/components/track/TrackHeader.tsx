@@ -1,78 +1,113 @@
 
-import { SessionTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Pencil } from 'lucide-react';
-import MarketplaceButton from '../MarketplaceButton';
+import { Music, Maximize2, SlidersHorizontal, Pencil } from 'lucide-react';
 
 interface TrackHeaderProps {
-  sessionName: string;
-  isEditingSession: boolean;
-  sessionTemplate: SessionTemplate;
-  onBack: () => void;
-  onSessionNameChange: () => void;
-  setSessionName: (name: string) => void;
-  setIsEditingSession: (editing: boolean) => void;
+  id: string;
+  name: string;
+  color: string;
+  type: string;
+  isRecording: boolean;
+  isEditing: boolean;
+  trackName: string;
+  setIsEditing: (value: boolean) => void;
+  setTrackName: (value: string) => void;
+  onNameChange: (id: string, name: string) => void;
+  onFXClick: () => void;
+  onExpandClick: () => void;
 }
 
 const TrackHeader = ({
-  sessionName,
-  isEditingSession,
-  sessionTemplate,
-  onBack,
-  onSessionNameChange,
-  setSessionName,
-  setIsEditingSession
+  id,
+  name,
+  color,
+  type,
+  isRecording,
+  isEditing,
+  trackName,
+  setIsEditing,
+  setTrackName,
+  onNameChange,
+  onFXClick,
+  onExpandClick
 }: TrackHeaderProps) => {
+  const handleNameChange = () => {
+    if (trackName.trim() !== '') {
+      onNameChange(id, trackName);
+      setIsEditing(false);
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      onSessionNameChange();
+      handleNameChange();
     } else if (e.key === 'Escape') {
-      setSessionName(sessionTemplate.name);
-      setIsEditingSession(false);
+      setTrackName(name);
+      setIsEditing(false);
+    }
+  };
+
+  const getTrackIcon = () => {
+    switch(type.toLowerCase()) {
+      case 'drums':
+      case 'percussion':
+        return <Music className="h-4 w-4" style={{ color }} />;
+      default:
+        return <Music className="h-4 w-4" style={{ color }} />;
     }
   };
 
   return (
-    <div className="flex justify-between items-center mb-6">
+    <div className="flex justify-between items-center mb-2">
       <div className="flex items-center gap-2">
-        <Button 
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={onBack}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+        {getTrackIcon()}
         
-        {isEditingSession ? (
+        {isEditing ? (
           <Input
-            value={sessionName}
-            onChange={(e) => setSessionName(e.target.value)}
-            onBlur={onSessionNameChange}
+            value={trackName}
+            onChange={(e) => setTrackName(e.target.value)}
+            onBlur={handleNameChange}
             onKeyDown={handleKeyDown}
-            className="h-8 py-1 px-2 w-48 bg-fever-black/40 border-fever-light/20"
+            className="h-6 py-1 px-2 w-32 bg-fever-black/40 border-fever-light/20"
             autoFocus
           />
         ) : (
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-fever-red">
-              {sessionName} Session
-            </h1>
+          <div className="flex items-center gap-1">
+            <span className="font-space font-bold text-sm">{name}</span>
             <Button 
               variant="ghost" 
               size="sm" 
-              className="ml-2 h-6 w-6 p-0" 
-              onClick={() => setIsEditingSession(true)}
+              className="h-5 w-5 p-0 hover:bg-fever-dark" 
+              onClick={() => setIsEditing(true)}
             >
               <Pencil className="h-3 w-3" />
             </Button>
           </div>
         )}
+        
+        {isRecording && (
+          <span className="bg-fever-red rounded-full h-2 w-2 animate-pulse"></span>
+        )}
       </div>
-      
-      <div className="flex gap-2">
-        <MarketplaceButton />
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 hover:bg-fever-dark"
+          onClick={onFXClick}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="h-7 w-7 p-0 hover:bg-fever-dark" 
+          onClick={onExpandClick}
+        >
+          <Maximize2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
