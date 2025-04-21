@@ -11,7 +11,7 @@ interface WaveformVisualizerProps {
 const WaveformVisualizer = ({ 
   data, 
   width = 200, 
-  height = 60,
+  height = 40,
   color = '#22c55e'
 }: WaveformVisualizerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -56,7 +56,7 @@ const WaveformVisualizer = ({
       ref={canvasRef}
       width={width}
       height={height}
-      className="rounded-sm max-h-14"
+      className="rounded-sm max-h-10"
     />
   );
 };
