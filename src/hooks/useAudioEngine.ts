@@ -1,9 +1,26 @@
-
 import { useState, useEffect } from 'react';
 
 export interface AudioBlob {
   blob: Blob;
   url: string;
+}
+
+declare global {
+  interface Window {
+    electron: {
+      detectAudioInterfaces: () => Promise<{
+        id: string;
+        name: string;
+        type: 'input' | 'output';
+        isScarlettInterface: boolean;
+      }[]>;
+      initializeAudio: (deviceId: string) => Promise<boolean>;
+      startRecording: () => boolean;
+      stopRecording: () => Promise<Blob>;
+      getInputLevel: () => Promise<number>;
+      cleanup: () => void;
+    };
+  }
 }
 
 export const useAudioEngine = (deviceId: string | null) => {

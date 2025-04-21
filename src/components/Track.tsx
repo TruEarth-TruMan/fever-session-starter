@@ -7,6 +7,8 @@ import { VolumeX, Volume2, Maximize2, Music, SlidersHorizontal, Pencil } from 'l
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useAudioEngine } from '@/hooks/useAudioEngine';
+import AudioMeter from './AudioMeter';
+import WaveformVisualizer from './WaveformVisualizer';
 
 interface TrackProps {
   track: TrackType;
@@ -175,18 +177,21 @@ const Track = ({
           </div>
         </div>
         
-        <div className="flex mb-4 h-20 items-end space-x-[1px] cursor-pointer" onClick={handlePlayback}>
-          {waveformData.map((height, i) => (
-            <div 
-              key={`${track.id}-wave-${i}`}
-              className="waveform-bar" 
-              style={{ 
-                height: `${Math.max(5, height * 100)}%`,
-                backgroundColor: track.isRecording ? track.color : undefined,
-                opacity: track.muted ? 0.5 : 1
-              }}
+        <div className="flex mb-4 h-20 items-end space-x-2">
+          {track.inputMonitor && (
+            <div className="h-full flex items-center">
+              <AudioMeter level={track.isRecording ? 0.7 : 0} height={80} />
+            </div>
+          )}
+          
+          <div className="flex-1 cursor-pointer" onClick={handlePlayback}>
+            <WaveformVisualizer
+              data={waveformData}
+              height={80}
+              width={track.inputMonitor ? "calc(100% - 28px)" : "100%"}
+              color={track.color}
             />
-          ))}
+          </div>
         </div>
         
         <div className="track-controls">
