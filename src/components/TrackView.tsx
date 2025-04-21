@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Track as TrackType, SessionTemplate } from '@/types';
 import Track from './Track';
 import FXDrawer from './FXDrawer';
 import TransportControls from './TransportControls';
+import LoopControls from './LoopControls';
 import { Button } from '@/components/ui/button';
 import { 
   Download, 
@@ -47,7 +47,12 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
   const [fxDrawerOpen, setFxDrawerOpen] = useState(false);
   const [exportFormat, setExportFormat] = useState("mp3");
   const [exportQuality, setExportQuality] = useState("320");
-  
+  const [loopEnabled, setLoopEnabled] = useState(false);
+  const [loopStart, setLoopStart] = useState(0);
+  const [loopEnd, setLoopEnd] = useState(30);
+  const [isOverdubbing, setIsOverdubbing] = useState(false);
+  const [totalDuration, setTotalDuration] = useState(120);
+
   const handleVolumeChange = (trackId: string, volume: number) => {
     setTracks(tracks.map(track => 
       track.id === trackId ? { ...track, volume } : track
@@ -134,15 +139,12 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
   
   const handleRecord = () => {
     if (isRecording) {
-      // Stop recording
       setIsRecording(false);
       setIsPlaying(false);
     } else {
-      // Start recording with count-in simulation
       setIsRecording(true);
       setIsPlaying(true);
       
-      // Update tracks to show recording state
       setTracks(tracks.map(track => {
         if (track.inputMonitor) {
           return {
@@ -157,14 +159,20 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
   };
   
   const handlePlay = () => {
+    if (loopEnabled) {
+      setIsPlaying(false);
+      console.log('Starting playback from loop start:', loopStart);
+    }
     setIsPlaying(true);
   };
   
   const handleStop = () => {
     setIsPlaying(false);
     setIsRecording(false);
+    if (loopEnabled) {
+      console.log('Stopping and resetting to loop start:', loopStart);
+    }
     
-    // Reset recording state on tracks
     setTracks(tracks.map(track => ({
       ...track,
       isRecording: false
@@ -172,7 +180,6 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
   };
   
   const handleMetronome = () => {
-    // Metronome toggle functionality would be implemented here
     console.log('Metronome toggled');
   };
 
@@ -181,7 +188,6 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
   };
 
   const handleExport = () => {
-    // Export functionality would be implemented here
     console.log(`Exporting as ${exportFormat} with quality ${exportQuality}`);
   };
 
@@ -193,7 +199,23 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
     }
     return "Custom";
   };
-  
+
+  const handleLoopRangeChange = (start: number, end: number) => {
+    setLoopStart(start);
+    setLoopEnd(end);
+  };
+
+  const handleToggleLoop = (enabled: boolean) => {
+    setLoopEnabled(enabled);
+    if (enabled) {
+      setIsPlaying(false);
+    }
+  };
+
+  const handleToggleOverdub = (enabled: boolean) => {
+    setIsOverdubbing(enabled);
+  };
+
   return (
     <div className="pb-32">
       <div className="container max-w-4xl mx-auto pt-4 px-4">
@@ -364,6 +386,19 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
           </div>
         </div>
         
+        <div className="mb-4">
+          <LoopControls
+            isEnabled={loopEnabled}
+            onToggleLoop={handleToggleLoop}
+            loopStart={loopStart}
+            loopEnd={loopEnd}
+            onLoopRangeChange={handleLoopRangeChange}
+            totalDuration={totalDuration}
+            isOverdubbing={isOverdubbing}
+            onToggleOverdub={handleToggleOverdub}
+          />
+        </div>
+
         <div className="space-y-4">
           {tracks.map((track) => (
             <Track 
