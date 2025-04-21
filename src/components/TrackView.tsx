@@ -5,7 +5,7 @@ import Track from './Track';
 import FXDrawer from './FXDrawer';
 import TransportControls from './TransportControls';
 import LoopControls from './LoopControls';
-import TrackHeader from './track/TrackHeader';
+import SessionHeader from './SessionHeader'; // Renamed the import to clarify
 import { useTransportManager } from '@/hooks/useTransportManager';
 import { useTrackOperations } from '@/hooks/useTrackOperations';
 import { useSessionState } from '@/hooks/useSessionState';
@@ -37,17 +37,26 @@ const TrackView = ({ sessionTemplate, onBack }: TrackViewProps) => {
     setIsEditingSession(false);
   };
 
+  const exportProps = {
+    exportFormat: 'wav',
+    setExportFormat: (format: string) => console.log('Format:', format),
+    exportQuality: 'high',
+    setExportQuality: (quality: string) => console.log('Quality:', quality),
+    handleExport: () => console.log('Exporting...'),
+    getExportPreset: () => 'standard'
+  };
+
   return (
     <div className="pb-32">
       <div className="container max-w-4xl mx-auto pt-4 px-4">
-        <TrackHeader 
+        <SessionHeader
           sessionName={sessionName}
-          isEditingSession={isEditingSession}
-          sessionTemplate={sessionTemplate}
-          onBack={onBack}
-          onSessionNameChange={handleSessionNameChange}
           setSessionName={setSessionName}
+          isEditingSession={isEditingSession}
           setIsEditingSession={setIsEditingSession}
+          handleSessionNameChange={handleSessionNameChange}
+          onBack={onBack}
+          exportProps={exportProps}
         />
         
         <div className="mb-4">
