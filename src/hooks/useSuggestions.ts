@@ -50,6 +50,10 @@ export const useSuggestions = (
             <button
               onClick={() => {
                 updateTrack(quietTrack.id, { volume: quietTrack.volume + 6 });
+                setDismissedSuggestions(prev => ({
+                  ...prev,
+                  volume: prev.volume + 1
+                }));
               }}
               className="bg-fever-amber text-fever-black px-3 py-1 rounded hover:bg-fever-amber/80"
             >
@@ -100,6 +104,10 @@ export const useSuggestions = (
                   }
                 ]
               });
+              setDismissedSuggestions(prev => ({
+                ...prev,
+                dryVocals: prev.dryVocals + 1
+              }));
             }}
             className="bg-fever-amber text-fever-black px-3 py-1 rounded hover:bg-fever-amber/80"
           >
@@ -127,6 +135,10 @@ export const useSuggestions = (
               // Logic to flatten loop takes would go here
               console.log('Flattening loop takes...');
               setActiveLoopTakes(0);
+              setDismissedSuggestions(prev => ({
+                ...prev,
+                loopFatigue: prev.loopFatigue + 1
+              }));
             }}
             className="bg-fever-amber text-fever-black px-3 py-1 rounded hover:bg-fever-amber/80"
           >
