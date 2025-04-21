@@ -1,3 +1,4 @@
+
 import {
   Sheet,
   SheetContent,
@@ -29,7 +30,7 @@ const MarketplaceDrawer = ({ open, onOpenChange }: MarketplaceDrawerProps) => {
     }
   }, []);
 
-  const { data: packs, isLoading, isError } = useQuery({
+  const { data: packs, isLoading, isError } = useQuery<Pack[]>({
     queryKey: ["marketplacePacks"],
     queryFn: getMarketplacePacks,
   });
@@ -80,7 +81,7 @@ const MarketplaceDrawer = ({ open, onOpenChange }: MarketplaceDrawerProps) => {
         <div className="grid gap-4">
           {isLoading && <div>Loading packs...</div>}
           {isError && <div>Error loading packs. Please try again.</div>}
-          {packs?.map((pack: Pack) => (
+          {packs?.map((pack) => (
             <MarketplaceItem
               key={pack.id}
               pack={pack}

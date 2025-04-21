@@ -32,3 +32,11 @@ export interface Effect {
   active: boolean;
   params: Record<string, number>;
 }
+
+export interface Pack {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  tags: string[];
+}
