@@ -47,8 +47,8 @@ const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
         <Accordion type="single" collapsible className="w-full">
           {helpTopics.map((topic, index) => (
             <AccordionItem key={index} value={`item-${index}`}>
-              <AccordionTrigger>{topic.question}</AccordionTrigger>
-              <AccordionContent className="text-sm text-muted-foreground">
+              <AccordionTrigger className="text-fever-light hover:text-white">{topic.question}</AccordionTrigger>
+              <AccordionContent className="text-sm text-fever-light/90 hover:text-white">
                 {topic.answer}
               </AccordionContent>
             </AccordionItem>
@@ -60,3 +60,4 @@ const HelpDialog = ({ open, onOpenChange }: HelpDialogProps) => {
 };
 
 export default HelpDialog;
+
