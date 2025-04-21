@@ -10,6 +10,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+// Declare the electron global type
+declare global {
+  interface Window {
+    electron?: {
+      detectAudioInterfaces: () => Promise<{
+        id: string;
+        name: string;
+        type: 'input' | 'output';
+        isScarlettInterface: boolean;
+      }[]>;
+    };
+  }
+}
+
 interface InterfaceDetectionProps {
   onDetected: () => void;
 }
@@ -18,15 +32,30 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
   const [open, setOpen] = useState(true);
   const [detecting, setDetecting] = useState(true);
   const [detected, setDetected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  // Simulate interface detection
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDetecting(false);
-      setDetected(true);
-    }, 2000);
-    
-    return () => clearTimeout(timer);
+    const detectInterfaces = async () => {
+      try {
+        if (window.electron) {
+          const devices = await window.electron.detectAudioInterfaces();
+          const hasScarlettInterface = devices.some(device => device.isScarlettInterface);
+          setDetected(hasScarlettInterface);
+        } else {
+          // Fallback for web - simulate detection
+          setTimeout(() => {
+            setDetected(true);
+          }, 2000);
+        }
+      } catch (err) {
+        setError('Failed to detect audio interfaces');
+        console.error('Interface detection error:', err);
+      } finally {
+        setDetecting(false);
+      }
+    };
+
+    detectInterfaces();
   }, []);
   
   const handleContinue = () => {
@@ -44,6 +73,8 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
           <DialogDescription className="text-center text-fever-light/70">
             {detecting ? (
               "Scanning for Focusrite Scarlett interface..."
+            ) : error ? (
+              error
             ) : detected ? (
               "Scarlett interface detected. Ready to record?"
             ) : (
@@ -87,3 +118,4 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
 };
 
 export default InterfaceDetection;
+
