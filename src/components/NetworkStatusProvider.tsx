@@ -21,6 +21,17 @@ export const NetworkStatusProvider: React.FC<{ children: React.ReactNode }> = ({
   });
   const { toast } = useToast();
 
+  // Define checkNetworkStatus function first, before using it
+  const checkNetworkStatus = () => {
+    const online = navigator.onLine;
+    if (online !== networkStatus.isOnline) {
+      setNetworkStatus({
+        isOnline: online,
+        lastChecked: new Date()
+      });
+    }
+  };
+
   useEffect(() => {
     // Initial check
     checkNetworkStatus();
@@ -41,17 +52,6 @@ export const NetworkStatusProvider: React.FC<{ children: React.ReactNode }> = ({
         title: "Connection Lost",
         description: "You are working offline. Changes will be saved locally."
       });
-    };
-
-    // Check network status periodically
-    const checkNetworkStatus = () => {
-      const online = navigator.onLine;
-      if (online !== networkStatus.isOnline) {
-        setNetworkStatus({
-          isOnline: online,
-          lastChecked: new Date()
-        });
-      }
     };
 
     window.addEventListener('online', handleOnline);
