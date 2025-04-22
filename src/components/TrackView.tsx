@@ -12,6 +12,10 @@ import { useSuggestions } from '@/hooks/useSuggestions';
 import { AlertProvider, useAlerts } from '@/providers/AlertProvider';
 import AlertBanner from '@/components/ui/AlertBanner';
 import { useExportState } from '@/hooks/useExportState';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import AudioDeviceConfig from './AudioDeviceConfig';
+import { Settings } from 'lucide-react';
 
 interface TrackViewProps {
   sessionTemplate: SessionTemplate;
@@ -72,28 +76,44 @@ const TrackViewContent = ({ sessionTemplate, onBack }: TrackViewProps) => {
   return (
     <div className="pb-32">
       <div className="container max-w-4xl mx-auto pt-4 px-4">
-        <SessionHeader
-          sessionName={sessionName}
-          setSessionName={setSessionName}
-          isEditingSession={isEditingSession}
-          setIsEditingSession={setIsEditingSession}
-          handleSessionNameChange={handleSessionNameChange}
-          onBack={onBack}
-          exportProps={{
-            exportFormat: exportState.exportFormat,
-            setExportFormat: exportState.setExportFormat,
-            exportQuality: exportState.exportQuality,
-            setExportQuality: exportState.setExportQuality,
-            exportRange: exportState.exportRange,
-            setExportRange: exportState.setExportRange,
-            exportName: exportState.exportName,
-            setExportName: exportState.setExportName,
-            isExporting: exportState.isExporting,
-            handleExport: exportState.handleExport,
-            getExportPreset: exportState.getExportPreset
-          }}
-        />
-        
+        <div className="flex items-center justify-between mb-4">
+          <SessionHeader
+            sessionName={sessionName}
+            setSessionName={setSessionName}
+            isEditingSession={isEditingSession}
+            setIsEditingSession={setIsEditingSession}
+            handleSessionNameChange={handleSessionNameChange}
+            onBack={onBack}
+            exportProps={{
+              exportFormat: exportState.exportFormat,
+              setExportFormat: exportState.setExportFormat,
+              exportQuality: exportState.exportQuality,
+              setExportQuality: exportState.setExportQuality,
+              exportRange: exportState.exportRange,
+              setExportRange: exportState.setExportRange,
+              exportName: exportState.exportName,
+              setExportName: exportState.setExportName,
+              isExporting: exportState.isExporting,
+              handleExport: exportState.handleExport,
+              getExportPreset: exportState.getExportPreset
+            }}
+          />
+          
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Audio Settings</SheetTitle>
+              </SheetHeader>
+              <AudioDeviceConfig />
+            </SheetContent>
+          </Sheet>
+        </div>
+
         <div className="mb-4">
           <LoopControls
             isEnabled={transport.loopEnabled}
