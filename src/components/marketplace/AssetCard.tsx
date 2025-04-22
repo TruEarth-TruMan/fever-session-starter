@@ -1,4 +1,3 @@
-
 import { Download, Check, Layers, Headphones, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -8,24 +7,25 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AssetCardProps {
   asset: AnyAsset;
+  onInstall: () => void;
+  onUninstall: () => void;
+  installed: boolean;
 }
 
-const AssetCard = ({ asset }: AssetCardProps) => {
-  const { installAsset, uninstallAsset, isAssetInstalled } = useMarketplaceStore();
+const AssetCard = ({ asset, onInstall, onUninstall, installed }: AssetCardProps) => {
+  const { installAsset, uninstallAsset } = useMarketplaceStore();
   const { toast } = useToast();
   
-  const isInstalled = isAssetInstalled(asset.id);
-  
   const handleToggleInstall = () => {
-    if (isInstalled) {
-      uninstallAsset(asset.id);
+    if (installed) {
+      onUninstall();
       toast({
         title: "Asset Uninstalled",
         description: `${asset.title} has been removed from your library.`,
         variant: "default",
       });
     } else {
-      installAsset(asset.id);
+      onInstall();
       toast({
         title: "Asset Installed",
         description: `${asset.title} has been added to your library.`,
@@ -34,7 +34,6 @@ const AssetCard = ({ asset }: AssetCardProps) => {
     }
   };
   
-  // Get the appropriate icon based on asset type
   const getAssetIcon = () => {
     switch(asset.type) {
       case 'fxChain':
@@ -48,7 +47,6 @@ const AssetCard = ({ asset }: AssetCardProps) => {
     }
   };
   
-  // Get type display name
   const getAssetTypeName = () => {
     switch(asset.type) {
       case 'fxChain':
@@ -73,7 +71,7 @@ const AssetCard = ({ asset }: AssetCardProps) => {
         />
         
         <div className="absolute top-2 right-2 flex gap-1">
-          {isInstalled && (
+          {installed && (
             <span className="bg-fever-red text-white text-xs px-2 py-0.5 rounded-full">
               Installed
             </span>
@@ -121,15 +119,15 @@ const AssetCard = ({ asset }: AssetCardProps) => {
         </Button>
         
         <Button
-          variant={isInstalled ? "outline" : "default"} 
+          variant={installed ? "outline" : "default"} 
           size="sm"
-          className={isInstalled 
+          className={installed 
             ? "border-fever-red text-fever-red hover:bg-fever-red/20" 
             : "bg-fever-red text-white hover:bg-fever-red/90"
           }
           onClick={handleToggleInstall}
         >
-          {isInstalled ? (
+          {installed ? (
             <>
               <Check className="h-4 w-4 mr-2" />
               Installed
