@@ -63,9 +63,8 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				// Fever custom colors
 				fever: {
-					red: '#E63946',
+					red: '#C8102E',
 					black: '#1D3557',
 					amber: '#FCBF49',
 					blue: '#A8DADC',
@@ -127,6 +126,7 @@ export default {
 			fontFamily: {
 				'poppins': ['Poppins', 'sans-serif'],
 				'space': ['Space Mono', 'monospace'],
+				'orbitron': ['Orbitron', 'Poppins', 'sans-serif'],
 			}
 		}
 	},
