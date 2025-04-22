@@ -53,7 +53,7 @@ module.exports = {
   publish: [
     {
       provider: "generic",
-      url: "https://mydomain.com/update",
+      url: "https://feverstudio.live/update",
       channel: "latest",
     }
   ],
