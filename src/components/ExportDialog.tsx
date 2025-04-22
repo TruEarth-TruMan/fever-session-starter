@@ -10,8 +10,9 @@ import {
   DialogClose
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Download } from 'lucide-react';
+import { Download, Loader2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { 
   Select,
   SelectContent,
@@ -19,12 +20,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ExportOptions } from '@/hooks/useExportState';
 
 interface ExportDialogProps {
-  exportFormat: string;
-  setExportFormat: (format: string) => void;
-  exportQuality: string;
-  setExportQuality: (quality: string) => void;
+  exportFormat: ExportOptions["format"];
+  setExportFormat: (format: ExportOptions["format"]) => void;
+  exportQuality: ExportOptions["quality"];
+  setExportQuality: (quality: ExportOptions["quality"]) => void;
+  exportRange: ExportOptions["range"];
+  setExportRange: (range: ExportOptions["range"]) => void;
+  exportName: string;
+  setExportName: (name: string) => void;
+  isExporting: boolean;
   handleExport: () => void;
   getExportPreset: () => string;
 }
@@ -34,6 +41,11 @@ const ExportDialog = ({
   setExportFormat,
   exportQuality,
   setExportQuality,
+  exportRange,
+  setExportRange,
+  exportName,
+  setExportName,
+  isExporting,
   handleExport,
   getExportPreset
 }: ExportDialogProps) => {
@@ -54,12 +66,24 @@ const ExportDialog = ({
         </DialogHeader>
         <div className="py-4 space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="name" className="text-fever-light">
+              Export Name
+            </Label>
+            <Input
+              id="name"
+              value={exportName}
+              onChange={(e) => setExportName(e.target.value)}
+              className="bg-fever-black/40 border-fever-light/20 text-fever-light"
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="format" className="text-fever-light">
               Format
             </Label>
             <Select 
               value={exportFormat} 
-              onValueChange={setExportFormat}
+              onValueChange={(value) => setExportFormat(value as ExportOptions["format"])}
             >
               <SelectTrigger id="format" className="bg-fever-black/40 border-fever-light/20 text-fever-light">
                 <SelectValue placeholder="Select format" />
@@ -79,7 +103,7 @@ const ExportDialog = ({
               </Label>
               <Select 
                 value={exportQuality} 
-                onValueChange={setExportQuality}
+                onValueChange={(value) => setExportQuality(value as ExportOptions["quality"])}
               >
                 <SelectTrigger id="quality" className="bg-fever-black/40 border-fever-light/20 text-fever-light">
                   <SelectValue placeholder="Select quality" />
@@ -92,6 +116,24 @@ const ExportDialog = ({
               </Select>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="range" className="text-fever-light">
+              Export Range
+            </Label>
+            <Select 
+              value={exportRange} 
+              onValueChange={(value) => setExportRange(value as ExportOptions["range"])}
+            >
+              <SelectTrigger id="range" className="bg-fever-black/40 border-fever-light/20 text-fever-light">
+                <SelectValue placeholder="Select range" />
+              </SelectTrigger>
+              <SelectContent className="bg-fever-dark border-fever-light/20">
+                <SelectItem value="full">Full Session</SelectItem>
+                <SelectItem value="loop">Loop Region Only</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           
           <div className="space-y-2">
             <Label htmlFor="preset" className="text-fever-light">
@@ -111,8 +153,19 @@ const ExportDialog = ({
           <Button 
             className="bg-fever-amber text-fever-black hover:bg-fever-amber/80"
             onClick={handleExport}
+            disabled={isExporting}
           >
-            Export
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                <span>Export</span>
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
