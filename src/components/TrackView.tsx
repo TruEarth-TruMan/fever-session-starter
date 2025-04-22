@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Track as TrackType, SessionTemplate } from '@/types';
 import Track from './Track';
@@ -12,6 +11,7 @@ import { useSessionState } from '@/hooks/useSessionState';
 import { useSuggestions } from '@/hooks/useSuggestions';
 import { AlertProvider, useAlerts } from '@/providers/AlertProvider';
 import AlertBanner from '@/components/ui/AlertBanner';
+import { useExportState } from '@/hooks/useExportState';
 
 interface TrackViewProps {
   sessionTemplate: SessionTemplate;
@@ -27,6 +27,8 @@ const TrackViewContent = ({ sessionTemplate, onBack }: TrackViewProps) => {
   const trackOps = useTrackOperations(sessionTemplate.tracks);
   const { alerts, addAlert } = useAlerts();
   
+  const exportState = useExportState();
+  
   const { dismissSuggestion } = useSuggestions(
     trackOps.tracks,
     transport.isPlaying,
@@ -37,7 +39,6 @@ const TrackViewContent = ({ sessionTemplate, onBack }: TrackViewProps) => {
   );
 
   useEffect(() => {
-    // Example of a device change alert
     const handleDeviceChange = () => {
       addAlert(
         'warning', 
@@ -47,10 +48,8 @@ const TrackViewContent = ({ sessionTemplate, onBack }: TrackViewProps) => {
       );
     };
     
-    // This would normally be connected to actual device change events
     const timer = setTimeout(() => {
-      // This is just a demo - in production, this would be triggered by actual device changes
-      // handleDeviceChange();
+      handleDeviceChange();
     }, 3000);
     
     return () => clearTimeout(timer);
@@ -60,19 +59,6 @@ const TrackViewContent = ({ sessionTemplate, onBack }: TrackViewProps) => {
     setIsEditingSession(false);
   };
 
-  const exportProps = {
-    exportFormat: 'wav',
-    setExportFormat: (format: string) => console.log('Format:', format),
-    exportQuality: 'high',
-    setExportQuality: (quality: string) => console.log('Quality:', quality),
-    handleExport: () => {
-      addAlert('success', 'Export Started', 'Your session is being exported. We\'ll notify you when it\'s ready.');
-      console.log('Exporting...');
-    },
-    getExportPreset: () => 'standard'
-  };
-  
-  // Generate current session date for auto-naming
   useEffect(() => {
     if (!sessionName || sessionName === sessionTemplate.name) {
       const today = new Date();
@@ -93,7 +79,19 @@ const TrackViewContent = ({ sessionTemplate, onBack }: TrackViewProps) => {
           setIsEditingSession={setIsEditingSession}
           handleSessionNameChange={handleSessionNameChange}
           onBack={onBack}
-          exportProps={exportProps}
+          exportProps={{
+            exportFormat: exportState.exportFormat,
+            setExportFormat: exportState.setExportFormat,
+            exportQuality: exportState.exportQuality,
+            setExportQuality: exportState.setExportQuality,
+            exportRange: exportState.exportRange,
+            setExportRange: exportState.setExportRange,
+            exportName: exportState.exportName,
+            setExportName: exportState.setExportName,
+            isExporting: exportState.isExporting,
+            handleExport: exportState.handleExport,
+            getExportPreset: exportState.getExportPreset
+          }}
         />
         
         <div className="mb-4">

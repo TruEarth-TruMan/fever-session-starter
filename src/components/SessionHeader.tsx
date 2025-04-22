@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import SaveDialog from './SaveDialog';
 import ExportDialog from './ExportDialog';
+import { ExportOptions } from '@/hooks/useExportState';
 
 interface SessionHeaderProps {
   sessionName: string;
@@ -13,10 +14,15 @@ interface SessionHeaderProps {
   handleSessionNameChange: () => void;
   onBack: () => void;
   exportProps: {
-    exportFormat: string;
-    setExportFormat: (format: string) => void;
-    exportQuality: string;
-    setExportQuality: (quality: string) => void;
+    exportFormat: ExportOptions["format"];
+    setExportFormat: (format: ExportOptions["format"]) => void;
+    exportQuality: ExportOptions["quality"];
+    setExportQuality: (quality: ExportOptions["quality"]) => void;
+    exportRange: ExportOptions["range"];
+    setExportRange: (range: ExportOptions["range"]) => void;
+    exportName: string;
+    setExportName: (name: string) => void;
+    isExporting: boolean;
     handleExport: () => void;
     getExportPreset: () => string;
   };
