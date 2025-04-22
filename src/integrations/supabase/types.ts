@@ -33,6 +33,45 @@ export type Database = {
         }
         Relationships: []
       }
+      sessions: {
+        Row: {
+          created_at: string
+          fx: Json
+          id: string
+          is_favorite: boolean
+          loop_region: Json | null
+          name: string
+          tracks: Json
+          type: Database["public"]["Enums"]["session_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fx?: Json
+          id?: string
+          is_favorite?: boolean
+          loop_region?: Json | null
+          name: string
+          tracks?: Json
+          type: Database["public"]["Enums"]["session_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fx?: Json
+          id?: string
+          is_favorite?: boolean
+          loop_region?: Json | null
+          name?: string
+          tracks?: Json
+          type?: Database["public"]["Enums"]["session_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -41,7 +80,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      session_type: "voice" | "guitar" | "podcast" | "keyboard" | "band"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -156,6 +195,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      session_type: ["voice", "guitar", "podcast", "keyboard", "band"],
+    },
   },
 } as const
