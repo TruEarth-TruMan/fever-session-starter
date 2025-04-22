@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { SessionTemplate } from '@/types';
+import { SessionTemplate, Track, Effect } from '@/types';
 import SessionCard from '@/components/sessions/SessionCard';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -38,21 +38,53 @@ export default function Sessions() {
       if (error) throw error;
       
       // Transform the data to ensure it matches SessionTemplate
-      const transformedData = data.map(session => ({
-        id: session.id,
-        name: session.name,
-        type: session.type,
-        tracks: session.tracks || [],
-        is_favorite: session.is_favorite,
-        updated_at: session.updated_at,
-        created_at: session.created_at,
-        user_id: session.user_id,
-        fx: session.fx,
-        loop_region: session.loop_region,
-        // Add default values for required fields in SessionTemplate
-        description: '',
-        iconName: getIconForSessionType(session.type),
-      }));
+      // Make sure tracks are properly cast as Track[]
+      const transformedData = data.map(session => {
+        // Ensure tracks is an array and has the correct format
+        const tracks = Array.isArray(session.tracks) 
+          ? session.tracks.map((track: any): Track => ({
+              id: track.id || '',
+              name: track.name || '',
+              type: track.type || '',
+              color: track.color || '#000000',
+              muted: track.muted || false,
+              soloed: track.soloed || false,
+              volume: track.volume || 0,
+              pan: track.pan || 0,
+              inputMonitor: track.inputMonitor || false,
+              fx: Array.isArray(track.fx) ? track.fx : [],
+              waveform: track.waveform || [],
+              isRecording: track.isRecording || false,
+              audio: track.audio || undefined
+            }))
+          : [];
+        
+        // Ensure fx is an array with the correct format
+        const fx = Array.isArray(session.fx) 
+          ? session.fx.map((effect: any): Effect => ({
+              id: effect.id || '',
+              name: effect.name || '',
+              type: effect.type || '',
+              active: effect.active || false,
+              params: effect.params || {}
+            }))
+          : [];
+        
+        return {
+          id: session.id,
+          name: session.name,
+          type: session.type,
+          tracks: tracks,
+          is_favorite: session.is_favorite,
+          updated_at: session.updated_at,
+          created_at: session.created_at,
+          user_id: session.user_id,
+          fx: fx,
+          loop_region: session.loop_region,
+          description: '',
+          iconName: getIconForSessionType(session.type)
+        };
+      });
       
       setSessions(transformedData);
     } catch (error) {
