@@ -44,39 +44,42 @@ const FeedbackDialog = ({ open, onOpenChange }: FeedbackDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md bg-fever-dark/95">
         <DialogHeader>
-          <DialogTitle>Help Us Improve Fever</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white">Help Us Improve Fever</DialogTitle>
+          <DialogDescription className="text-gray-300">
             Your feedback helps us make Fever better for everyone.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium">What did you love?</label>
+            <label className="text-sm font-medium text-gray-100">What did you love?</label>
             <Textarea
               value={loved}
               onChange={(e) => setLoved(e.target.value)}
               placeholder="Tell us what worked well..."
+              className="bg-fever-dark/70 text-white placeholder-gray-400"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">What frustrated you?</label>
+            <label className="text-sm font-medium text-gray-100">What frustrated you?</label>
             <Textarea
               value={frustrated}
               onChange={(e) => setFrustrated(e.target.value)}
               placeholder="Tell us what could be better..."
+              className="bg-fever-dark/70 text-white placeholder-gray-400"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Any bugs or crashes?</label>
+            <label className="text-sm font-medium text-gray-100">Any bugs or crashes?</label>
             <Textarea
               value={bugs}
               onChange={(e) => setBugs(e.target.value)}
               placeholder="Describe any technical issues..."
+              className="bg-fever-dark/70 text-white placeholder-gray-400"
             />
           </div>
 
@@ -90,3 +93,4 @@ const FeedbackDialog = ({ open, onOpenChange }: FeedbackDialogProps) => {
 };
 
 export default FeedbackDialog;
+
