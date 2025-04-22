@@ -126,7 +126,7 @@ export default function SessionCard({ session, onRefresh }: SessionCardProps) {
           </Button>
         </div>
         <CardDescription>
-          Last modified {formatDistanceToNow(new Date(session.updated_at))} ago
+          Last modified {session.updated_at ? formatDistanceToNow(new Date(session.updated_at)) + " ago" : "recently"}
         </CardDescription>
       </CardHeader>
       <CardContent>

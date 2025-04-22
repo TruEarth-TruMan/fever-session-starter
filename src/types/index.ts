@@ -4,9 +4,15 @@ export interface SessionTemplate {
   id: string;
   name: string;
   type: SessionType;
-  description: string;
+  description?: string;
   tracks: Track[];
-  iconName: string;
+  iconName?: string;
+  is_favorite?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  user_id?: string;
+  fx?: Effect[];
+  loop_region?: any;
 }
 
 export interface Track {

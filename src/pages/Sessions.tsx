@@ -36,7 +36,25 @@ export default function Sessions() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      setSessions(data);
+      
+      // Transform the data to ensure it matches SessionTemplate
+      const transformedData = data.map(session => ({
+        id: session.id,
+        name: session.name,
+        type: session.type,
+        tracks: session.tracks || [],
+        is_favorite: session.is_favorite,
+        updated_at: session.updated_at,
+        created_at: session.created_at,
+        user_id: session.user_id,
+        fx: session.fx,
+        loop_region: session.loop_region,
+        // Add default values for required fields in SessionTemplate
+        description: '',
+        iconName: getIconForSessionType(session.type),
+      }));
+      
+      setSessions(transformedData);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -45,6 +63,18 @@ export default function Sessions() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Helper function to get icon based on session type
+  const getIconForSessionType = (type: string): string => {
+    switch (type) {
+      case 'voice': return 'mic';
+      case 'guitar': return 'audio-waveform';
+      case 'podcast': return 'mic';
+      case 'keyboard': return 'music';
+      case 'band': return 'music-4';
+      default: return 'music';
     }
   };
 
@@ -60,7 +90,7 @@ export default function Sessions() {
       if (sortBy === 'name') {
         return a.name.localeCompare(b.name);
       }
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      return new Date(b.updated_at || '').getTime() - new Date(a.updated_at || '').getTime();
     });
 
   return (
