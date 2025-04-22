@@ -20,7 +20,10 @@ contextBridge.exposeInMainWorld('electron', {
   },
   cleanup: () => {
     audioEngine.cleanup();
-  }
+  },
+  // New functions for app updates and telemetry
+  getAppVersion: () => ipcRenderer.invoke('get-app-version') as Promise<string>,
+  logTelemetry: (data: Record<string, any>) => ipcRenderer.invoke('log-telemetry', data) as Promise<boolean>
 });
 
 declare global {
@@ -32,6 +35,8 @@ declare global {
       stopRecording: () => Promise<Blob>;
       getInputLevel: () => Promise<number>;
       cleanup: () => void;
+      getAppVersion: () => Promise<string>;
+      logTelemetry: (data: Record<string, any>) => Promise<boolean>;
     };
   }
 }

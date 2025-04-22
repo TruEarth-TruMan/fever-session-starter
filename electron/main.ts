@@ -2,6 +2,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { getAudioDevices } from './audioDevices';
+import { setupAutoUpdater } from './updater';
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -20,6 +21,11 @@ function createWindow() {
   } else {
     win.loadFile(path.join(__dirname, '../dist/index.html'));
   }
+
+  // Set up auto-updater in production mode
+  if (process.env.NODE_ENV !== 'development') {
+    setupAutoUpdater(win);
+  }
 }
 
 app.whenReady().then(() => {
@@ -35,6 +41,21 @@ app.whenReady().then(() => {
       return [];
     }
   });
+
+  // Handle app version request from renderer
+  ipcMain.handle('get-app-version', () => {
+    return app.getVersion();
+  });
+
+  // Handle error telemetry if enabled
+  ipcMain.handle('log-telemetry', async (event, data) => {
+    // This would connect to your telemetry service
+    // For now, just log to console in production
+    if (process.env.NODE_ENV !== 'development') {
+      console.log('Telemetry:', data);
+    }
+    return true;
+  });
 });
 
 app.on('window-all-closed', () => {
@@ -48,4 +69,3 @@ app.on('activate', () => {
     createWindow();
   }
 });
-
