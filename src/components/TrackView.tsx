@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import AudioDeviceConfig from './AudioDeviceConfig';
 import { Settings } from 'lucide-react';
+import { useHeatMizerTips } from '@/hooks/useHeatMizerTips';
 
 interface TrackViewProps {
   sessionTemplate: SessionTemplate;
@@ -58,6 +59,8 @@ const TrackViewContent = ({ sessionTemplate, onBack }: TrackViewProps) => {
     
     return () => clearTimeout(timer);
   }, [addAlert]);
+
+  useHeatMizerTips(trackOps.tracks);
 
   const handleSessionNameChange = () => {
     setIsEditingSession(false);
