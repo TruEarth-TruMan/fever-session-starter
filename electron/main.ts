@@ -12,7 +12,8 @@ function createWindow() {
       nodeIntegration: true,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
-    }
+    },
+    icon: path.join(__dirname, '../build/icons/icon.ico') // Windows icon path
   });
 
   // In development, load from dev server. In production, load from dist
@@ -26,10 +27,23 @@ function createWindow() {
   if (process.env.NODE_ENV !== 'development') {
     setupAutoUpdater(win);
   }
+  
+  return win;
 }
 
 app.whenReady().then(() => {
-  createWindow();
+  const mainWindow = createWindow();
+  
+  // Set macOS dock icon if platform is macOS
+  if (process.platform === 'darwin') {
+    try {
+      const iconPath = path.join(__dirname, '../build/icons/icon.icns');
+      app.dock.setIcon(iconPath);
+      console.log('macOS dock icon set successfully');
+    } catch (error) {
+      console.error('Failed to set macOS dock icon:', error);
+    }
+  }
 
   // Handle audio device detection request from renderer
   ipcMain.handle('detect-audio-interfaces', async () => {

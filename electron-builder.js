@@ -12,6 +12,11 @@ module.exports = {
   productName: "Fever",
   copyright: "Copyright © 2025",
   
+  // Icon configuration for all platforms
+  // These files should be placed in the build/icons directory
+  // Uses OS-specific formats: .icns for macOS, .ico for Windows
+  icon: "build/icons/icon",
+  
   // macOS specific configuration
   mac: {
     category: "public.app-category.music",
@@ -26,6 +31,7 @@ module.exports = {
     entitlements: "build/entitlements.mac.plist",
     entitlementsInherit: "build/entitlements.mac.plist",
     notarize: false, // Set to true when credentials are available
+    icon: "build/icons/icon.icns",
   },
   
   // Windows specific configuration
@@ -34,6 +40,7 @@ module.exports = {
       { target: "nsis", arch: ["x64"] }
     ],
     artifactName: "Fever-${version}-setup.${ext}",
+    icon: "build/icons/icon.ico",
   },
   
   // NSIS installer configuration for Windows
