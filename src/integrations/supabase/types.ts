@@ -16,6 +16,9 @@ export type Database = {
           fever_plus: boolean | null
           id: string
           saved_sessions: Json | null
+          stripe_customer_id: string | null
+          subscription_end: string | null
+          subscription_tier: string | null
         }
         Insert: {
           created_at?: string | null
@@ -23,6 +26,9 @@ export type Database = {
           fever_plus?: boolean | null
           id: string
           saved_sessions?: Json | null
+          stripe_customer_id?: string | null
+          subscription_end?: string | null
+          subscription_tier?: string | null
         }
         Update: {
           created_at?: string | null
@@ -30,6 +36,9 @@ export type Database = {
           fever_plus?: boolean | null
           id?: string
           saved_sessions?: Json | null
+          stripe_customer_id?: string | null
+          subscription_end?: string | null
+          subscription_tier?: string | null
         }
         Relationships: []
       }
@@ -69,6 +78,36 @@ export type Database = {
           type?: Database["public"]["Enums"]["session_type"]
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      subscription_events: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          event_type: string
+          id: string
+          stripe_customer_id: string | null
+          subscription_tier: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          event_type: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_tier?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          event_type?: string
+          id?: string
+          stripe_customer_id?: string | null
+          subscription_tier?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
