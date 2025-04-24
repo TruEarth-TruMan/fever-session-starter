@@ -137,5 +137,5 @@ async function handler(req: Request): Promise<Response> {
   }
 }
 
-// Use Deno.serve with disabled body parsing
-Deno.serve({ onRequest: handler, onParseBody: false })
+// Fix: Properly use Deno.serve with the handler function
+Deno.serve({ port: 8000 }, handler)
