@@ -8,18 +8,25 @@ const STRIPE_WEBHOOK_SECRET = Deno.env.get('STRIPE_WEBHOOK_SECRET')
 const SUPABASE_URL = "https://vdlmwlqsexisiwokinqb.supabase.co"
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
+// Initialize Stripe client
 const stripe = new Stripe(STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16',
   httpClient: Stripe.createFetchHttpClient(),
 })
 
+// Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!)
 
+// CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
 }
 
+// Debug mode - set to true for enhanced logging
+const DEBUG_MODE = true
+
+// Function to log webhook events to the database
 async function logWebhookEvent(event: Stripe.Event, success: boolean, errorMessage?: string) {
   try {
     const customer = event.data.object as { email?: string, customer?: string }
@@ -36,20 +43,33 @@ async function logWebhookEvent(event: Stripe.Event, success: boolean, errorMessa
   }
 }
 
-// Log detailed information about the webhook request
+// Enhanced request logging function
 async function logRequestDetails(request: Request, status: string, details?: any) {
   try {
-    console.log(`Webhook ${status}:`, JSON.stringify({
+    const logDetails = {
       method: request.method,
       url: request.url,
       headers: Object.fromEntries(request.headers.entries()),
-      details: details || {}
-    }));
+      details: details || {},
+      timestamp: new Date().toISOString(),
+      debug_mode: DEBUG_MODE
+    };
+    
+    console.log(`Webhook ${status}:`, JSON.stringify(logDetails));
+    
+    // Log to database for persistence
+    await supabase.from('stripe_webhook_logs').insert({
+      event_type: `debug.${status}`,
+      payload: logDetails,
+      success: status === 'success',
+      error_message: status.includes('error') ? JSON.stringify(details) : null,
+    });
   } catch (error) {
     console.error('Error logging request details:', error);
   }
 }
 
+// Function to update subscription status in the database
 async function updateSubscriptionStatus(
   customerId: string,
   subscriptionTier: string,
@@ -89,12 +109,29 @@ async function updateSubscriptionStatus(
 }
 
 serve(async (req) => {
-  // Log the incoming request
-  await logRequestDetails(req, 'received');
+  // Initial request received log
+  await logRequestDetails(req, 'received', {
+    stripe_key_exists: !!STRIPE_SECRET_KEY,
+    webhook_secret_exists: !!STRIPE_WEBHOOK_SECRET,
+    webhook_secret_value: DEBUG_MODE ? STRIPE_WEBHOOK_SECRET?.substring(0, 4) + '...' : '[hidden]'
+  });
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
+  }
+
+  // If debug mode is enabled, we can return 200 immediately to test connectivity
+  if (DEBUG_MODE && req.url.includes('debug=true')) {
+    const body = await req.text();
+    await logRequestDetails(req, 'debug_mode_success', { 
+      body_length: body.length,
+      body_sample: body.substring(0, 100) + '...' 
+    });
+    return new Response(JSON.stringify({ debug: true, received: true }), { 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
+      status: 200 
+    });
   }
 
   try {
@@ -108,6 +145,12 @@ serve(async (req) => {
 
     // Get the raw request body as text for signature verification
     const body = await req.text()
+    await logRequestDetails(req, 'processing', { 
+      body_length: body.length, 
+      signature_exists: !!signature,
+      signature_snippet: signature?.substring(0, 10) + '...'
+    });
+
     let event: Stripe.Event
 
     try {
@@ -117,8 +160,15 @@ serve(async (req) => {
         signature,
         STRIPE_WEBHOOK_SECRET!
       )
+      await logRequestDetails(req, 'signature_verified', { eventType: event.type });
     } catch (err) {
-      await logRequestDetails(req, 'error', { message: err.message, webhookSecret: STRIPE_WEBHOOK_SECRET ? 'set' : 'not set' });
+      await logRequestDetails(req, 'error', { 
+        message: err.message, 
+        webhookSecret: STRIPE_WEBHOOK_SECRET ? 'set' : 'not set',
+        webhookSecretFirstChars: STRIPE_WEBHOOK_SECRET?.substring(0, 4) + '...',
+        signatureFirstChars: signature?.substring(0, 10) + '...',
+        bodyPreview: body.substring(0, 100) + '...'
+      });
       await logWebhookEvent({ type: 'webhook.validation_error', data: { object: {} } } as Stripe.Event, false, err.message)
       return new Response(`Webhook Error: ${err.message}`, { status: 400, headers: corsHeaders })
     }
@@ -162,6 +212,7 @@ serve(async (req) => {
       
       default: {
         console.log(`Unhandled event type: ${event.type}`)
+        await logRequestDetails(req, 'unhandled_event', { eventType: event.type });
       }
     }
 
@@ -175,7 +226,7 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error('Error processing webhook:', error)
-    await logRequestDetails(req, 'error', { message: error.message });
+    await logRequestDetails(req, 'error', { message: error.message, stack: error.stack });
     
     // Log the failed webhook event with error details
     await logWebhookEvent(
