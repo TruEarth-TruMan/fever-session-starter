@@ -2,7 +2,9 @@
 import Stripe from 'https://esm.sh/stripe@13.6.0'
 import { STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, corsHeaders, DEBUG_MODE } from './config.ts'
 import { logWebhookEvent, logRequestDetails } from './logging.ts'
-import { updateSubscriptionStatus } from './subscriptionService.ts'
+import { handleCheckoutCompleted } from './handlers/checkoutCompleted.ts'
+import { handleSubscriptionUpdated } from './handlers/subscriptionUpdated.ts'
+import { handleSubscriptionDeleted } from './handlers/subscriptionDeleted.ts'
 
 // Initialize Stripe client
 const stripe = new Stripe(STRIPE_SECRET_KEY!, {
@@ -89,35 +91,17 @@ async function handler(req: Request): Promise<Response> {
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-        if (session.customer && session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
-          await updateSubscriptionStatus(
-            session.customer as string,
-            subscription.items.data[0].price.lookup_key || 'fever_plus',
-            subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null
-          )
-        }
+        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
         break
       }
 
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        await updateSubscriptionStatus(
-          subscription.customer as string,
-          subscription.items.data[0].price.lookup_key || 'fever_plus',
-          subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null
-        )
+        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
         break
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        await updateSubscriptionStatus(
-          subscription.customer as string,
-          'free',
-          null
-        )
+        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
         break
       }
       
