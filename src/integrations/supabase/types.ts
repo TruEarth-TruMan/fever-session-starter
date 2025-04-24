@@ -81,6 +81,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_webhook_logs: {
+        Row: {
+          customer_email: string | null
+          customer_id: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json
+          processed_at: string | null
+          success: boolean
+        }
+        Insert: {
+          customer_email?: string | null
+          customer_id?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          processed_at?: string | null
+          success: boolean
+        }
+        Update: {
+          customer_email?: string | null
+          customer_id?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed_at?: string | null
+          success?: boolean
+        }
+        Relationships: []
+      }
       subscription_events: {
         Row: {
           created_at: string | null

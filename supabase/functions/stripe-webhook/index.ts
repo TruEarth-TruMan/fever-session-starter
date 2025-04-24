@@ -20,6 +20,22 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+async function logWebhookEvent(event: Stripe.Event, success: boolean, errorMessage?: string) {
+  try {
+    const customer = event.data.object as { email?: string, customer?: string }
+    await supabase.from('stripe_webhook_logs').insert({
+      event_type: event.type,
+      payload: event.data.object,
+      success: success,
+      error_message: errorMessage || null,
+      customer_id: customer.customer || null,
+      customer_email: customer.email || null
+    })
+  } catch (logError) {
+    console.error('Failed to log webhook event:', logError)
+  }
+}
+
 async function updateSubscriptionStatus(
   customerId: string,
   subscriptionTier: string,
@@ -43,34 +59,6 @@ async function updateSubscriptionStatus(
   }
 }
 
-async function logSubscriptionEvent(
-  customerId: string,
-  eventType: string,
-  subscriptionTier: string | null,
-  details: any
-) {
-  try {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('stripe_customer_id', customerId)
-      .single()
-
-    if (profile) {
-      await supabase.from('subscription_events').insert({
-        user_id: profile.id,
-        stripe_customer_id: customerId,
-        event_type: eventType,
-        subscription_tier: subscriptionTier,
-        details,
-      })
-    }
-  } catch (error) {
-    console.error('Error logging subscription event:', error)
-    throw error
-  }
-}
-
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -81,15 +69,23 @@ serve(async (req) => {
     const signature = req.headers.get('stripe-signature')
 
     if (!signature) {
+      await logWebhookEvent({ type: 'webhook.missing_signature', data: { object: {} } } as Stripe.Event, false, 'Missing stripe-signature header')
       return new Response('Missing stripe-signature header', { status: 400 })
     }
 
     const body = await req.text()
-    const event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      STRIPE_WEBHOOK_SECRET!
-    )
+    let event: Stripe.Event
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        body,
+        signature,
+        STRIPE_WEBHOOK_SECRET!
+      )
+    } catch (err) {
+      await logWebhookEvent({ type: 'webhook.validation_error', data: { object: {} } } as Stripe.Event, false, err.message)
+      return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+    }
 
     console.log(`Processing Stripe event: ${event.type}`)
 
@@ -128,19 +124,22 @@ serve(async (req) => {
       }
     }
 
-    await logSubscriptionEvent(
-      event.data.object.customer as string,
-      event.type,
-      event.type === 'customer.subscription.deleted' ? 'free' : 
-        (event.data.object as any).items?.data[0]?.price?.lookup_key || 'fever_plus',
-      event.data.object
-    )
+    // Log the successful webhook event
+    await logWebhookEvent(event, true)
 
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
     console.error('Error processing webhook:', error)
+    
+    // Log the failed webhook event with error details
+    await logWebhookEvent(
+      { type: 'webhook.processing_error', data: { object: {} } } as Stripe.Event, 
+      false, 
+      error.message
+    )
+
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
