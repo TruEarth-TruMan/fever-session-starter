@@ -51,12 +51,12 @@ async function handler(req: Request): Promise<Response> {
     }
 
     // Get the raw request body for signature verification
-const bodyBuffer = await req.arrayBuffer()
-const bodyText = new TextDecoder('utf-8').decode(bodyBuffer)
+    const bodyBuffer = await req.arrayBuffer()
+    const bodyText = new TextDecoder('utf-8').decode(bodyBuffer)
     
     // Enhanced logging before signature verification
     console.log('🔍 Verifying signature with:', {
-      bodyLength: body.length,
+      bodyLength: bodyText.length,
       signaturePreview: signature.slice(0, 20) + '...',
       webhookSecretPreview: STRIPE_WEBHOOK_SECRET ? `${STRIPE_WEBHOOK_SECRET.slice(0, 10)}...` : 'not set'
     })
@@ -64,10 +64,10 @@ const bodyText = new TextDecoder('utf-8').decode(bodyBuffer)
     let event: Stripe.Event
     try {
       event = stripe.webhooks.constructEvent(
-  bodyText,
-  signature,
-  STRIPE_WEBHOOK_SECRET!
-)
+        bodyText,
+        signature,
+        STRIPE_WEBHOOK_SECRET!
+      )
       await logRequestDetails(req, 'signature_verified', { 
         eventType: event.type,
         eventId: event.id 
@@ -79,7 +79,7 @@ const bodyText = new TextDecoder('utf-8').decode(bodyBuffer)
         error: err.message,
         webhookSecretPreview: STRIPE_WEBHOOK_SECRET ? `${STRIPE_WEBHOOK_SECRET.slice(0, 10)}...` : 'not set',
         signaturePreview: signature.slice(0, 20) + '...',
-        bodyPreview: body.slice(0, 100) + '...'
+        bodyPreview: bodyText.slice(0, 100) + '...'
       })
       return new Response(`Webhook Error: ${err.message}`, { 
         status: 400, 
