@@ -106,17 +106,19 @@ serve(async (req) => {
       return new Response('Missing stripe-signature header', { status: 400, headers: corsHeaders })
     }
 
+    // Get the raw request body as text for signature verification
     const body = await req.text()
     let event: Stripe.Event
 
     try {
+      // Verify the webhook signature using the STRIPE_WEBHOOK_SECRET
       event = stripe.webhooks.constructEvent(
         body,
         signature,
         STRIPE_WEBHOOK_SECRET!
       )
     } catch (err) {
-      await logRequestDetails(req, 'error', { message: err.message });
+      await logRequestDetails(req, 'error', { message: err.message, webhookSecret: STRIPE_WEBHOOK_SECRET ? 'set' : 'not set' });
       await logWebhookEvent({ type: 'webhook.validation_error', data: { object: {} } } as Stripe.Event, false, err.message)
       return new Response(`Webhook Error: ${err.message}`, { status: 400, headers: corsHeaders })
     }
@@ -157,6 +159,10 @@ serve(async (req) => {
         )
         break
       }
+      
+      default: {
+        console.log(`Unhandled event type: ${event.type}`)
+      }
     }
 
     // Log the successful webhook event
@@ -165,6 +171,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
     })
   } catch (error) {
     console.error('Error processing webhook:', error)
