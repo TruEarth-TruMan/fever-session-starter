@@ -36,13 +36,29 @@ async function logWebhookEvent(event: Stripe.Event, success: boolean, errorMessa
   }
 }
 
+// Log detailed information about the webhook request
+async function logRequestDetails(request: Request, status: string, details?: any) {
+  try {
+    console.log(`Webhook ${status}:`, JSON.stringify({
+      method: request.method,
+      url: request.url,
+      headers: Object.fromEntries(request.headers.entries()),
+      details: details || {}
+    }));
+  } catch (error) {
+    console.error('Error logging request details:', error);
+  }
+}
+
 async function updateSubscriptionStatus(
   customerId: string,
   subscriptionTier: string,
   subscriptionEnd: string | null
 ) {
   try {
-    const { data: profile } = await supabase
+    console.log(`Updating subscription for customer ${customerId} to tier ${subscriptionTier}`);
+    
+    const { data: profile, error } = await supabase
       .from('profiles')
       .update({
         subscription_tier: subscriptionTier,
@@ -51,7 +67,20 @@ async function updateSubscriptionStatus(
       .eq('stripe_customer_id', customerId)
       .select()
       .single()
-
+      
+    if (error) {
+      console.error('Error updating subscription in database:', error);
+      throw error;
+    }
+    
+    // Log the successful update
+    await supabase.from('subscription_events').insert({
+      stripe_customer_id: customerId,
+      subscription_tier: subscriptionTier,
+      event_type: subscriptionEnd ? 'subscription_updated' : 'subscription_cancelled',
+      details: { profile_id: profile?.id, subscription_end: subscriptionEnd }
+    });
+    
     return profile
   } catch (error) {
     console.error('Error updating subscription status:', error)
@@ -60,6 +89,9 @@ async function updateSubscriptionStatus(
 }
 
 serve(async (req) => {
+  // Log the incoming request
+  await logRequestDetails(req, 'received');
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -69,8 +101,9 @@ serve(async (req) => {
     const signature = req.headers.get('stripe-signature')
 
     if (!signature) {
+      await logRequestDetails(req, 'error', { message: 'Missing stripe-signature header' });
       await logWebhookEvent({ type: 'webhook.missing_signature', data: { object: {} } } as Stripe.Event, false, 'Missing stripe-signature header')
-      return new Response('Missing stripe-signature header', { status: 400 })
+      return new Response('Missing stripe-signature header', { status: 400, headers: corsHeaders })
     }
 
     const body = await req.text()
@@ -83,11 +116,13 @@ serve(async (req) => {
         STRIPE_WEBHOOK_SECRET!
       )
     } catch (err) {
+      await logRequestDetails(req, 'error', { message: err.message });
       await logWebhookEvent({ type: 'webhook.validation_error', data: { object: {} } } as Stripe.Event, false, err.message)
-      return new Response(`Webhook Error: ${err.message}`, { status: 400 })
+      return new Response(`Webhook Error: ${err.message}`, { status: 400, headers: corsHeaders })
     }
 
     console.log(`Processing Stripe event: ${event.type}`)
+    await logRequestDetails(req, 'processing', { eventType: event.type });
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -126,12 +161,14 @@ serve(async (req) => {
 
     // Log the successful webhook event
     await logWebhookEvent(event, true)
+    await logRequestDetails(req, 'success', { eventType: event.type });
 
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
     console.error('Error processing webhook:', error)
+    await logRequestDetails(req, 'error', { message: error.message });
     
     // Log the failed webhook event with error details
     await logWebhookEvent(
@@ -143,7 +180,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
-        status: 400,
+        status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
