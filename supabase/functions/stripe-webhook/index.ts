@@ -61,9 +61,10 @@ async function handler(req: Request): Promise<Response> {
       webhookSecretPreview: STRIPE_WEBHOOK_SECRET ? `${STRIPE_WEBHOOK_SECRET.slice(0, 10)}...` : 'not set'
     })
 
+    // Use constructEventAsync instead of constructEvent for asynchronous signature verification
     let event: Stripe.Event
     try {
-      event = stripe.webhooks.constructEvent(
+      event = await stripe.webhooks.constructEventAsync(
         bodyText,
         signature,
         STRIPE_WEBHOOK_SECRET!
@@ -138,4 +139,4 @@ async function handler(req: Request): Promise<Response> {
 }
 
 // Fix: Properly use Deno.serve with the handler function
-Deno.serve({ port: 8000 }, handler)
+Deno.serve(handler)
