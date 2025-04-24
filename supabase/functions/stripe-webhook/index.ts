@@ -51,7 +51,8 @@ async function handler(req: Request): Promise<Response> {
     }
 
     // Get the raw request body for signature verification
-    const body = await req.text()
+const bodyBuffer = await req.arrayBuffer()
+const bodyText = new TextDecoder('utf-8').decode(bodyBuffer)
     
     // Enhanced logging before signature verification
     console.log('🔍 Verifying signature with:', {
@@ -63,10 +64,10 @@ async function handler(req: Request): Promise<Response> {
     let event: Stripe.Event
     try {
       event = stripe.webhooks.constructEvent(
-        body,
-        signature,
-        STRIPE_WEBHOOK_SECRET!
-      )
+  bodyText,
+  signature,
+  STRIPE_WEBHOOK_SECRET!
+)
       await logRequestDetails(req, 'signature_verified', { 
         eventType: event.type,
         eventId: event.id 
