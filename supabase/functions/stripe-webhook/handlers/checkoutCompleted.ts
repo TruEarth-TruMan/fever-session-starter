@@ -14,13 +14,23 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       return;
     }
 
+    const customerId = typeof session.customer === 'string' 
+      ? session.customer 
+      : session.customer.id;
+    
+    const subscriptionId = typeof session.subscription === 'string'
+      ? session.subscription
+      : session.subscription.id;
+
+    console.log(`🔍 Processing checkout for customer ${customerId} and subscription ${subscriptionId}`);
+    
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
     if (!stripeSecretKey) {
       throw new Error('STRIPE_SECRET_KEY is not set');
     }
 
     console.log('🔍 Fetching subscription details from Stripe API');
-    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${session.subscription}`, {
+    const response = await fetch(`https://api.stripe.com/v1/subscriptions/${subscriptionId}`, {
       headers: {
         'Authorization': `Bearer ${stripeSecretKey}`,
         'Content-Type': 'application/json'
@@ -38,11 +48,19 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session):
       items: subscription.items?.data?.length || 0
     });
 
-    // Extract the subscription details and update the user's subscription status
+    // Extract the subscription tier from the price lookup_key or fallback to a default
+    const subscriptionTier = subscription.items?.data[0]?.price?.lookup_key || 'fever_plus';
+    
+    // Calculate subscription end date if available
+    const subscriptionEnd = subscription.cancel_at 
+      ? new Date(subscription.cancel_at * 1000).toISOString() 
+      : null;
+
+    // Update the user's subscription status
     await updateSubscriptionStatus(
-      session.customer as string,
-      subscription.items.data[0]?.price?.lookup_key || 'fever_plus',
-      subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null
+      customerId,
+      subscriptionTier,
+      subscriptionEnd
     );
     
     console.log('✅ Successfully updated subscription status');
