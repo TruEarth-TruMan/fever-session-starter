@@ -1,5 +1,3 @@
-
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import Stripe from 'https://esm.sh/stripe@13.6.0'
 
@@ -17,13 +15,13 @@ const stripe = new Stripe(STRIPE_SECRET_KEY!, {
 // Initialize Supabase client
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY!)
 
-// CORS headers for cross-origin requests
+// CORS headers with explicit stripe-signature support
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
 }
 
-// Debug mode - set to true for enhanced logging
+// Debug mode for testing
 const DEBUG_MODE = true
 
 // Function to log webhook events to the database
@@ -108,69 +106,78 @@ async function updateSubscriptionStatus(
   }
 }
 
-serve(async (req) => {
-  // Initial request received log
+async function handler(req: Request): Promise<Response> {
+  // Initial request received log with secret verification
   await logRequestDetails(req, 'received', {
     stripe_key_exists: !!STRIPE_SECRET_KEY,
     webhook_secret_exists: !!STRIPE_WEBHOOK_SECRET,
-    webhook_secret_value: DEBUG_MODE ? STRIPE_WEBHOOK_SECRET?.substring(0, 4) + '...' : '[hidden]'
+    webhook_secret_preview: STRIPE_WEBHOOK_SECRET ? `${STRIPE_WEBHOOK_SECRET.slice(0, 10)}...` : 'not set'
   });
-  
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
 
-  // If debug mode is enabled, we can return 200 immediately to test connectivity
+  // Debug mode check
   if (DEBUG_MODE && req.url.includes('debug=true')) {
     const body = await req.text();
-    await logRequestDetails(req, 'debug_mode_success', { 
+    await logRequestDetails(req, 'debug_mode', {
       body_length: body.length,
-      body_sample: body.substring(0, 100) + '...' 
+      body_preview: body.slice(0, 100) + '...',
+      headers: Object.fromEntries(req.headers.entries())
     });
-    return new Response(JSON.stringify({ debug: true, received: true }), { 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }, 
-      status: 200 
+    return new Response(JSON.stringify({ debug: true, received: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
     });
   }
 
   try {
     const signature = req.headers.get('stripe-signature')
-
     if (!signature) {
+      console.error('⚠️ Missing stripe-signature header');
       await logRequestDetails(req, 'error', { message: 'Missing stripe-signature header' });
-      await logWebhookEvent({ type: 'webhook.missing_signature', data: { object: {} } } as Stripe.Event, false, 'Missing stripe-signature header')
-      return new Response('Missing stripe-signature header', { status: 400, headers: corsHeaders })
+      return new Response('Missing stripe-signature header', { 
+        status: 400, 
+        headers: corsHeaders 
+      })
     }
 
-    // Get the raw request body as text for signature verification
+    // Get the raw request body for signature verification
     const body = await req.text()
-    await logRequestDetails(req, 'processing', { 
-      body_length: body.length, 
-      signature_exists: !!signature,
-      signature_snippet: signature?.substring(0, 10) + '...'
+    
+    // Enhanced logging before signature verification
+    console.log('🔍 Verifying signature with:', {
+      bodyLength: body.length,
+      signaturePreview: signature.slice(0, 20) + '...',
+      webhookSecretPreview: STRIPE_WEBHOOK_SECRET ? `${STRIPE_WEBHOOK_SECRET.slice(0, 10)}...` : 'not set'
     });
 
     let event: Stripe.Event
-
     try {
-      // Verify the webhook signature using the STRIPE_WEBHOOK_SECRET
       event = stripe.webhooks.constructEvent(
         body,
         signature,
         STRIPE_WEBHOOK_SECRET!
       )
-      await logRequestDetails(req, 'signature_verified', { eventType: event.type });
-    } catch (err) {
-      await logRequestDetails(req, 'error', { 
-        message: err.message, 
-        webhookSecret: STRIPE_WEBHOOK_SECRET ? 'set' : 'not set',
-        webhookSecretFirstChars: STRIPE_WEBHOOK_SECRET?.substring(0, 4) + '...',
-        signatureFirstChars: signature?.substring(0, 10) + '...',
-        bodyPreview: body.substring(0, 100) + '...'
+      await logRequestDetails(req, 'signature_verified', { 
+        eventType: event.type,
+        eventId: event.id 
       });
-      await logWebhookEvent({ type: 'webhook.validation_error', data: { object: {} } } as Stripe.Event, false, err.message)
-      return new Response(`Webhook Error: ${err.message}`, { status: 400, headers: corsHeaders })
+    } catch (err) {
+      console.error('⚠️ Signature verification failed:', err.message);
+      console.error('Webhook secret used:', STRIPE_WEBHOOK_SECRET?.slice(0, 10) + '...');
+      await logRequestDetails(req, 'signature_verification_failed', {
+        error: err.message,
+        webhookSecretPreview: STRIPE_WEBHOOK_SECRET ? `${STRIPE_WEBHOOK_SECRET.slice(0, 10)}...` : 'not set',
+        signaturePreview: signature.slice(0, 20) + '...',
+        bodyPreview: body.slice(0, 100) + '...'
+      });
+      return new Response(`Webhook Error: ${err.message}`, { 
+        status: 400, 
+        headers: corsHeaders 
+      })
     }
 
     console.log(`Processing Stripe event: ${event.type}`)
@@ -226,15 +233,11 @@ serve(async (req) => {
     })
   } catch (error) {
     console.error('Error processing webhook:', error)
-    await logRequestDetails(req, 'error', { message: error.message, stack: error.stack });
+    await logRequestDetails(req, 'error', { 
+      message: error.message, 
+      stack: error.stack 
+    });
     
-    // Log the failed webhook event with error details
-    await logWebhookEvent(
-      { type: 'webhook.processing_error', data: { object: {} } } as Stripe.Event, 
-      false, 
-      error.message
-    )
-
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
@@ -243,4 +246,7 @@ serve(async (req) => {
       }
     )
   }
-})
+}
+
+// Use Deno.serve with disabled body parsing
+Deno.serve({ onRequest: handler, onParseBody: false })
