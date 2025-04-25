@@ -1,6 +1,7 @@
 
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 
 interface FallbackMessageProps {
   isSubscribed: boolean;
@@ -8,32 +9,34 @@ interface FallbackMessageProps {
 }
 
 export const FallbackMessage = ({ isSubscribed, tier }: FallbackMessageProps) => {
-  const navigate = useNavigate();
-
   return (
-    <div className="bg-card rounded-lg shadow-lg p-6 text-center">
-      <h1 className="text-3xl font-bold mb-6">Welcome to Fever+</h1>
-      
-      <div className="mb-6">
-        <p className="text-lg mb-4">
+    <div className="text-center space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold mb-2">
           {isSubscribed 
-            ? "You're already subscribed to Fever+!"
-            : "It looks like you might have refreshed the page or arrived here directly."}
-        </p>
+            ? "You're already subscribed to Fever+" 
+            : "Welcome to Fever"}
+        </h1>
         <p className="text-muted-foreground">
           {isSubscribed 
-            ? `Your current plan: ${tier}`
-            : "If you've just completed checkout, please check your email for confirmation."}
+            ? `You're currently on the ${tier.replace('_', ' ')} plan.` 
+            : "Ready to upgrade your music production experience?"}
         </p>
       </div>
-      
-      <div className="flex justify-center gap-4 mt-8">
-        <Button onClick={() => navigate('/')}>
-          Go to Dashboard
+
+      <div className="flex gap-4 justify-center">
+        <Button asChild>
+          <Link to="/dashboard">
+            Go to Dashboard
+          </Link>
         </Button>
+        
         {!isSubscribed && (
-          <Button variant="outline" onClick={() => navigate('/marketplace')}>
-            View Plans
+          <Button asChild variant="outline" className="gap-2">
+            <Link to="/marketplace">
+              <Sparkles className="h-4 w-4" />
+              Explore Fever+
+            </Link>
           </Button>
         )}
       </div>

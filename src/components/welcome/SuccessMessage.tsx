@@ -1,50 +1,56 @@
 
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { SessionDetails } from '@/types/subscription';
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { SessionDetails } from "@/types/subscription";
+import { Check } from "lucide-react";
 
 interface SuccessMessageProps {
   sessionDetails: SessionDetails | null;
-  userEmail: string | undefined;
+  userEmail: string;
 }
 
 export const SuccessMessage = ({ sessionDetails, userEmail }: SuccessMessageProps) => {
-  const navigate = useNavigate();
-  
-  return (
-    <div className="text-center">
-      <div className="h-16 w-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-          <polyline points="22 4 12 14.01 9 11.01"></polyline>
-        </svg>
+  if (!sessionDetails || !sessionDetails.success) {
+    return (
+      <div className="text-center space-y-4">
+        <h1 className="text-2xl font-bold">Verification Failed</h1>
+        <p className="text-muted-foreground">
+          We couldn't verify your subscription. Please try again or contact support.
+        </p>
+        <Button asChild>
+          <Link to="/dashboard">Go to Dashboard</Link>
+        </Button>
       </div>
-      
-      <h1 className="text-3xl font-bold mb-2">
-        Thanks for subscribing{userEmail ? `, ${userEmail.split('@')[0]}` : ''}!
-      </h1>
-      
-      <p className="text-xl mb-6">
-        Your account has been upgraded to {sessionDetails?.subscription_tier || 'Fever+'}
-      </p>
-      
-      <div className="bg-muted p-4 rounded-md mb-8 text-left">
-        <h3 className="font-medium mb-2">Subscription Details:</h3>
-        <ul className="space-y-1 text-sm">
-          <li><span className="font-medium">Status:</span> {sessionDetails?.subscription_status || 'Active'}</li>
-          <li><span className="font-medium">Plan:</span> {sessionDetails?.subscription_tier || 'Fever+'}</li>
-          <li><span className="font-medium">Email:</span> {sessionDetails?.customer_email || userEmail}</li>
+    );
+  }
+
+  const email = sessionDetails.customer_email || userEmail;
+  const tier = sessionDetails.subscription_tier || "Fever+";
+  const formattedTier = tier.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div className="text-center space-y-6">
+      <div className="mx-auto bg-green-100 rounded-full p-3 w-12 h-12 flex items-center justify-center">
+        <Check className="h-6 w-6 text-green-600" />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold">Welcome to {formattedTier}!</h1>
+        <p className="text-muted-foreground mt-2">
+          Your subscription has been activated for {email}.
+        </p>
+      </div>
+      <div className="bg-muted/50 rounded-lg p-4 text-left">
+        <h2 className="font-medium mb-2">Your subscription includes:</h2>
+        <ul className="space-y-1 text-sm text-muted-foreground">
+          <li>• Premium session templates</li>
+          <li>• Advanced audio effects</li>
+          <li>• Priority support</li>
+          <li>• Cloud storage for your projects</li>
         </ul>
       </div>
-      
-      <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Button onClick={() => navigate('/')}>
-          Go to Dashboard
-        </Button>
-        <Button variant="outline" onClick={() => navigate('/sessions')}>
-          Create New Session
-        </Button>
-      </div>
+      <Button asChild size="lg">
+        <Link to="/dashboard">Continue to Dashboard</Link>
+      </Button>
     </div>
   );
 };
