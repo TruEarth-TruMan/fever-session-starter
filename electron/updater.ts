@@ -8,42 +8,50 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
     return;
   }
 
-  // Configure update server with the new custom domain
-  const server = 'https://feverstudio.live';
-  const url = `${server}/fever-update.json`;
-
-  // Configure the auto-updater
-  autoUpdater.setFeedURL({ url });
-
-  // Check for updates periodically (every hour)
-  setInterval(() => {
-    autoUpdater.checkForUpdates();
-  }, 60 * 60 * 1000);
-
-  // Initial check on startup (after 10 seconds)
-  setTimeout(() => {
-    autoUpdater.checkForUpdates();
-  }, 10000);
-
-  // Handle update events
-  autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
-    const dialogOptions = {
-      type: 'info',
-      buttons: ['Restart', 'Later'],
-      title: 'Application Update',
-      message: process.platform === 'win32' ? releaseNotes : releaseName,
-      detail: 'A new version has been downloaded. Restart the application to apply the updates.'
-    };
+  // Configure update server with the custom domain
+  const platform = process.platform === 'darwin' ? 
+    `darwin-${process.arch}` : 
+    `win32-${process.arch}`;
     
-    dialog.showMessageBox(dialogOptions).then((returnValue) => {
-      if (returnValue.response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    });
-  });
+  const feedURL = `https://feverstudio.live/fever-update.json`;
+  
+  try {
+    autoUpdater.setFeedURL({ url: feedURL });
+    console.log(`Auto-updater configured with feed URL: ${feedURL}`);
+    
+    // Check for updates every hour
+    setInterval(() => {
+      autoUpdater.checkForUpdates();
+    }, 60 * 60 * 1000);
 
-  // Handle errors
-  autoUpdater.on('error', (error) => {
-    console.error('Auto-updater error:', error);
-  });
+    // Initial check on startup (after 10 seconds to let app initialize)
+    setTimeout(() => {
+      autoUpdater.checkForUpdates();
+    }, 10000);
+
+    // Update downloaded handler
+    autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName) => {
+      dialog.showMessageBox({
+        type: 'info',
+        buttons: ['Restart', 'Later'],
+        title: 'Application Update',
+        message: process.platform === 'win32' ? releaseNotes : releaseName,
+        detail: 'A new version has been downloaded. Restart the application to apply the updates.'
+      }).then((returnValue) => {
+        if (returnValue.response === 0) autoUpdater.quitAndInstall();
+      });
+    });
+
+    // Error handler
+    autoUpdater.on('error', (error) => {
+      console.error('Auto-updater error:', error);
+      dialog.showErrorBox(
+        'Error: ',
+        'Failed to check for updates. Please try again later.'
+      );
+    });
+
+  } catch (error) {
+    console.error('Failed to setup auto-updater:', error);
+  }
 };
