@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button"
 import { Download, Smartphone, Tablet } from "lucide-react"
 import { toast } from "sonner"
@@ -5,8 +6,8 @@ import { toast } from "sonner"
 export default function Hero() {
   const handleDownload = (platform: 'mac' | 'windows' | 'ios' | 'android') => {
     const downloadLinks = {
-      mac: '/Fever-Setup.dmg',
-      windows: '/Fever-Setup.exe',
+      mac: 'https://feverstudio.live/download/mac/Fever-Setup-1.0.0.dmg',
+      windows: 'https://feverstudio.live/download/windows/Fever-Setup-1.0.0.exe',
       ios: 'https://apps.apple.com/app/fever-audio/id123456789',
       android: 'https://play.google.com/store/apps/details?id=com.fever.audioapp'
     };
@@ -29,6 +30,11 @@ export default function Hero() {
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
+          
+          toast.success("Download started", {
+            description: `Your ${platform === 'mac' ? 'macOS' : 'Windows'} download has begun.`,
+            duration: 4000
+          });
         } else {
           toast.error("Download currently unavailable", {
             description: "Please check back later or contact support.",
