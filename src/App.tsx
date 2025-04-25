@@ -11,7 +11,8 @@ import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import Marketplace from "./pages/Marketplace";
 import Sessions from "./pages/Sessions";
-import Landing from "./pages/Landing"; // Import the Landing page
+import Landing from "./pages/Landing"; 
+import Welcome from "./pages/Welcome"; // Import the new Welcome page
 
 const queryClient = new QueryClient();
 
@@ -29,7 +30,8 @@ function App() {
               <Route path="/" element={<Index />} />
               <Route path="/sessions" element={<Sessions />} />
               <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/landing" element={<Landing />} /> {/* Add the new Landing route */}
+              <Route path="/landing" element={<Landing />} /> 
+              <Route path="/welcome" element={<Welcome />} /> {/* Add the new Welcome route */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
