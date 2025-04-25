@@ -44,40 +44,73 @@ export async function updateSubscriptionStatus(
           throw new Error(`No email found for Stripe customer: ${customerId}`)
         }
         
-        console.log(`Found email ${customer.email} for customer ${customerId}, updating profile...`)
+        console.log(`Found email ${customer.email} for customer ${customerId}, checking for profile...`)
         
         // Try to find profile by email
         const { data: profileByEmail, error: emailFetchError } = await supabase
           .from('profiles')
           .select()
           .eq('email', customer.email)
-          .single()
+          .maybeSingle() // Use maybeSingle instead of single to avoid errors when no match is found
           
         if (emailFetchError) {
-          console.error('No profile found by email either:', emailFetchError)
-          throw new Error(`No profile found for customer ${customerId} or email ${customer.email}`)
+          console.error('Error looking up profile by email:', emailFetchError)
+          throw emailFetchError
         }
-        
-        // Update the profile with the stripe_customer_id and subscription details
-        const { data: updatedProfile, error: updateError } = await supabase
-          .from('profiles')
-          .update({
-            stripe_customer_id: customerId,
-            subscription_tier: subscriptionTier,
-            subscription_end: subscriptionEnd,
-          })
-          .eq('id', profileByEmail.id)
-          .select()
-          .single()
+
+        if (profileByEmail) {
+          // If profile exists, update it
+          console.log(`Found profile for email ${customer.email}, updating...`)
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({
+              stripe_customer_id: customerId,
+              subscription_tier: subscriptionTier,
+              subscription_end: subscriptionEnd,
+              fever_plus: subscriptionTier !== 'free',
+            })
+            .eq('id', profileByEmail.id)
+            .select()
+            .single()
+            
+          if (updateError) {
+            console.error('Error updating profile by email:', updateError)
+            throw updateError
+          }
           
-        if (updateError) {
-          console.error('Error updating profile by email:', updateError)
-          throw updateError
+          console.log('Successfully updated profile by email:', updatedProfile)
+          await logSubscriptionEvent(customerId, subscriptionTier, subscriptionEnd, updatedProfile?.id)
+          return updatedProfile
+        } else {
+          // If profile doesn't exist yet, create a new one
+          console.log(`No existing profile found for email ${customer.email}, creating new profile...`)
+          
+          // Generate a UUID for the new profile
+          const newProfileId = crypto.randomUUID()
+          
+          const { data: newProfile, error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: newProfileId,
+              email: customer.email,
+              stripe_customer_id: customerId,
+              subscription_tier: subscriptionTier,
+              subscription_end: subscriptionEnd,
+              fever_plus: subscriptionTier !== 'free',
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single()
+            
+          if (insertError) {
+            console.error('Error creating new profile:', insertError)
+            throw insertError
+          }
+          
+          console.log('Successfully created new profile:', newProfile)
+          await logSubscriptionEvent(customerId, subscriptionTier, subscriptionEnd, newProfile?.id)
+          return newProfile
         }
-        
-        console.log('Successfully updated profile by email:', updatedProfile)
-        await logSubscriptionEvent(customerId, subscriptionTier, subscriptionEnd, updatedProfile?.id)
-        return updatedProfile
       } else {
         console.error('Error fetching profile:', fetchError)
         throw fetchError
@@ -90,6 +123,7 @@ export async function updateSubscriptionStatus(
       .update({
         subscription_tier: subscriptionTier,
         subscription_end: subscriptionEnd,
+        fever_plus: subscriptionTier !== 'free',
       })
       .eq('stripe_customer_id', customerId)
       .select()
@@ -121,7 +155,8 @@ async function logSubscriptionEvent(
       stripe_customer_id: customerId,
       subscription_tier: subscriptionTier,
       event_type: subscriptionEnd ? 'subscription_updated' : 'subscription_created',
-      details: { profile_id: profileId, subscription_end: subscriptionEnd }
+      details: { profile_id: profileId, subscription_end: subscriptionEnd },
+      user_id: profileId
     })
     console.log('Successfully logged subscription event')
   } catch (logError) {
