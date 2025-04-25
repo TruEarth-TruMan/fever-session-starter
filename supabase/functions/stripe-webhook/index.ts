@@ -44,9 +44,10 @@ async function handler(req: Request): Promise<Response> {
     if (!signature) {
       console.error('⚠️ Missing stripe-signature header')
       await logRequestDetails(req, 'error', { message: 'Missing stripe-signature header' })
-      return new Response('Missing stripe-signature header', { 
-        status: 400, 
-        headers: corsHeaders 
+      // Still return 200 to Stripe, but log the error
+      return new Response(JSON.stringify({ received: true, error: 'Missing signature' }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       })
     }
 
@@ -82,42 +83,67 @@ async function handler(req: Request): Promise<Response> {
         signaturePreview: signature.slice(0, 20) + '...',
         bodyPreview: bodyText.slice(0, 100) + '...'
       })
-      return new Response(`Webhook Error: ${err.message}`, { 
-        status: 400, 
-        headers: corsHeaders 
+      // Return 200 even for verification failures to prevent retries
+      return new Response(JSON.stringify({ received: true, error: 'Signature verification failed' }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       })
     }
 
     console.log(`Processing Stripe event: ${event.type}`)
     await logRequestDetails(req, 'processing', { eventType: event.type })
 
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
-        break
-      }
+    try {
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session)
+          break
+        }
 
-      case 'customer.subscription.updated': {
-        await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
-        break
-      }
+        case 'customer.subscription.updated': {
+          await handleSubscriptionUpdated(event.data.object as Stripe.Subscription)
+          break
+        }
 
-      case 'customer.subscription.deleted': {
-        await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
-        break
+        case 'customer.subscription.deleted': {
+          await handleSubscriptionDeleted(event.data.object as Stripe.Subscription)
+          break
+        }
+        
+        default: {
+          console.log(`Unhandled event type: ${event.type}`)
+          await logRequestDetails(req, 'unhandled_event', { eventType: event.type })
+        }
       }
+    } catch (handlerError) {
+      // Catch and log errors from handlers, but still return 200 to Stripe
+      console.error(`Error in handler for ${event.type}:`, handlerError)
+      await logRequestDetails(req, 'handler_error', { 
+        eventType: event.type, 
+        error: handlerError.message,
+        stack: handlerError.stack 
+      })
       
-      default: {
-        console.log(`Unhandled event type: ${event.type}`)
-        await logRequestDetails(req, 'unhandled_event', { eventType: event.type })
-      }
+      // Log the webhook event with the error
+      await logWebhookEvent(event, false, handlerError.message)
+      
+      // Still return a 200 response to prevent Stripe from retrying
+      return new Response(JSON.stringify({ 
+        received: true, 
+        processed: false, 
+        error: `Handler error: ${handlerError.message}` 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
     }
 
     // Log the successful webhook event
     await logWebhookEvent(event, true)
     await logRequestDetails(req, 'success', { eventType: event.type })
 
-    return new Response(JSON.stringify({ received: true }), {
+    // Always return a 200 response for successful processing
+    return new Response(JSON.stringify({ received: true, processed: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
@@ -128,10 +154,11 @@ async function handler(req: Request): Promise<Response> {
       stack: error.stack 
     })
     
+    // Even for unexpected errors, return 200 to prevent Stripe from retrying
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ received: true, error: error.message }),
       { 
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     )
