@@ -34,9 +34,8 @@ serve(async (req) => {
     // Initialize Supabase client with the service role key
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // Get the session ID from query params
-    const url = new URL(req.url)
-    const sessionId = url.searchParams.get('session_id')
+    // Get the request body for the session ID
+    const { session_id } = await req.json();
     
     // Check authorization (this ensures only authenticated users can access session details)
     const authHeader = req.headers.get('Authorization')
@@ -56,17 +55,17 @@ serve(async (req) => {
     }
     
     // Validate session ID
-    if (!sessionId) {
+    if (!session_id) {
       return new Response(JSON.stringify({ error: 'Missing session_id parameter' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    console.log(`Fetching Stripe session: ${sessionId}`)
+    console.log(`Fetching Stripe session: ${session_id}`)
     
     // Retrieve the session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
       expand: ['customer', 'subscription']
     })
 
@@ -75,7 +74,7 @@ serve(async (req) => {
         null : session.customer.email : null)
     
     if (!customerEmail) {
-      console.warn(`No customer email found for session ${sessionId}`)
+      console.warn(`No customer email found for session ${session_id}`)
     }
     
     // If customer email matches current user, update their profile

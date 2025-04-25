@@ -62,12 +62,12 @@ export default function Welcome() {
         }
 
         // Call our secure edge function to get session details
+        // Fixed: Properly pass the session_id in the body instead of using the query parameter
         const response = await supabase.functions.invoke('get-session-details', {
-          body: {},
+          body: { session_id: sessionId },
           headers: {
             Authorization: `Bearer ${token}`,
           },
-          query: { session_id: sessionId },
         });
 
         if (!response.data || response.error) {
