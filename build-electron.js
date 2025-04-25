@@ -57,7 +57,7 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
   }
 
   // Configure update server
-  const server = 'https://mydomain.com';
+  const server = 'https://feverstudio.live';
   const url = \`\${server}/fever-update.json\`;
 
   // Configure the auto-updater

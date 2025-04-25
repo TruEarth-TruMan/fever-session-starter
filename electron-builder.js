@@ -1,4 +1,3 @@
-
 /**
  * Fever Application Packaging Configuration
  * 
@@ -16,6 +15,19 @@ module.exports = {
   // These files should be placed in the build/icons directory
   // Uses OS-specific formats: .icns for macOS, .ico for Windows
   icon: "build/icons/icon",
+  
+  // Electron Builder configuration settings
+  directories: {
+    output: "release", // Where the packaged apps will be placed
+    buildResources: "build", // Where to find icons and other resources
+  },
+  
+  // Files to include in the build
+  files: [
+    "dist/**/*", // Built Vite app
+    "electron/**/*", // Electron main process files
+    "!node_modules/**/*", // Exclude node_modules
+  ],
   
   // macOS specific configuration
   mac: {
@@ -64,17 +76,4 @@ module.exports = {
       channel: "latest",
     }
   ],
-  
-  // Common configuration for all platforms
-  files: [
-    "dist/**/*",
-    "electron/**/*",
-    "!node_modules/**/*",
-  ],
-  
-  // Define build resources location
-  directories: {
-    output: "release",
-    buildResources: "build",
-  },
 };
