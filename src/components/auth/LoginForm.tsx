@@ -1,26 +1,44 @@
 
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/use-toast';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
+import { Mail } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 export default function LoginForm() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+
     try {
-      await signIn(email, password);
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin + '/welcome',
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Magic link sent!",
+        description: "Check your email for the login link.",
+      });
+
+      // Don't navigate away - user needs to check their email
     } catch (error) {
       toast({
         title: "Error",
-        description: "Invalid email or password",
+        description: error instanceof Error ? error.message : "Failed to send magic link",
         variant: "destructive",
       });
     } finally {
@@ -29,36 +47,26 @@ export default function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-sm">
+    <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
       <div className="space-y-2">
-        <Input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="bg-fever-dark/70 text-white placeholder-gray-400"
-        />
+        <Label htmlFor="email">Email</Label>
+        <div className="relative">
+          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="email"
+            type="email"
+            placeholder="fever@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="pl-9"
+            required
+          />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="bg-fever-dark/70 text-white placeholder-gray-400"
-        />
-      </div>
+
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Signing in..." : "Sign in"}
+        {isLoading ? "Sending magic link..." : "Send magic link"}
       </Button>
-      <p className="text-sm text-gray-400 text-center">
-        Don't have an account?{' '}
-        <Link to="/signup" className="text-white hover:underline">
-          Sign up
-        </Link>
-      </p>
     </form>
   );
 }
