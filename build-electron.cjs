@@ -2,14 +2,14 @@
 #!/usr/bin/env node
 const builder = require('electron-builder');
 const path = require('path');
-const fs = require('fs');
-const { execSync } = require('child_process');
 
 // Import utility functions from scripts
 const { setupBuildDirectories } = require('./scripts/setupBuildDirs');
 const { generateMacOSEntitlements } = require('./scripts/generateEntitlements');
 const { generateUpdateExample } = require('./scripts/generateUpdateExample');
 const { ensureDirectories } = require('./scripts/ensureDirectories');
+const { checkViteBuild } = require('./scripts/checkViteBuild');
+const { loadElectronConfig } = require('./scripts/loadElectronConfig');
 
 // Main build process
 async function buildApp() {
@@ -31,32 +31,11 @@ async function buildApp() {
     // Ensure download directories exist
     ensureDirectories(rootDir);
 
-    // Check if Vite build exists
-    const distPath = path.join(rootDir, 'dist', 'index.html');
-    console.log(`Checking for Vite build at: ${distPath}`);
-    
-    if (!fs.existsSync(distPath)) {
-      console.log('Vite build not found. Running build process...');
-      try {
-        execSync('npm run build', { stdio: 'inherit', cwd: rootDir });
-      } catch (error) {
-        console.error('Vite build failed:', error.message);
-        process.exit(1);
-      }
-    } else {
-      console.log('Vite build found. Proceeding with Electron build...');
-    }
+    // Check Vite build using utility function
+    checkViteBuild(rootDir);
 
-    // Load electron-builder config
-    const configPath = path.join(rootDir, 'electron-builder.js');
-    console.log(`Loading config from: ${configPath}`);
-    
-    if (!fs.existsSync(configPath)) {
-      console.error(`Config not found: ${configPath}`);
-      process.exit(1);
-    }
-    
-    const config = require(configPath);
+    // Load electron-builder config using utility function
+    const config = loadElectronConfig(rootDir);
 
     // Build the app using electron-builder
     console.log('Starting Electron build process...');
@@ -86,4 +65,3 @@ async function buildApp() {
 // Run the build process
 console.log("Starting build-electron.cjs script");
 buildApp();
-
