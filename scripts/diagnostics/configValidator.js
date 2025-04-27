@@ -7,10 +7,10 @@ const { checkModuleFormat } = require('./checks/config/moduleFormatCheck');
 function validateElectronBuilderConfig(rootDir) {
   console.log(`\n5. Checking electron-builder configuration`);
   
-  // Check for both .cjs and .js files
+  // Check for both .cjs and .js files using absolute paths
   const possiblePaths = [
-    path.join(rootDir, 'electron-builder.cjs'),
-    path.join(rootDir, 'electron-builder.js')
+    path.resolve(rootDir, 'electron-builder.cjs'),
+    path.resolve(rootDir, 'electron-builder.js')
   ];
   
   let configPath = null;
@@ -27,7 +27,7 @@ function validateElectronBuilderConfig(rootDir) {
     console.log('❌ No electron-builder configuration file found');
     console.log('Creating a default configuration file...');
     
-    configPath = path.join(rootDir, 'electron-builder.cjs');
+    configPath = path.resolve(rootDir, 'electron-builder.cjs');
     const defaultConfig = `/**
  * Fever Application Packaging Configuration
  */
@@ -59,6 +59,13 @@ module.exports = {
   
   try {
     console.log(`Using config file: ${configPath}`);
+    
+    // Clear require cache to ensure we get a fresh copy
+    if (require.cache[require.resolve(configPath)]) {
+      delete require.cache[require.resolve(configPath)];
+      console.log('Cleared require cache for config file');
+    }
+    
     const configContent = fs.readFileSync(configPath, 'utf-8');
     
     // Check basic configuration requirements
@@ -70,6 +77,7 @@ module.exports = {
     return Object.values(checks).every(Boolean) && hasValidModuleFormat;
   } catch (err) {
     console.log(`❌ Error analyzing electron-builder config: ${err.message}`);
+    console.log(`Stack: ${err.stack || 'No stack trace available'}`);
     return false;
   }
 }

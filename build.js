@@ -1,4 +1,5 @@
 
+#!/usr/bin/env node
 const { log } = require('./scripts/utils/logger');
 const { resolveProjectRoot } = require('./scripts/utils/pathResolver');
 const { validateBuildConfig } = require('./scripts/utils/buildValidator');
@@ -28,18 +29,21 @@ async function main() {
         log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
         
         // Check for electron-builder.cjs specifically
-        const electronBuilderPath = path.join(rootDir, 'electron-builder.cjs');
-        log(`electron-builder.cjs exists: ${fs.existsSync(electronBuilderPath)}`);
+        const electronBuilderCjsPath = path.resolve(rootDir, 'electron-builder.cjs');
+        const electronBuilderJsPath = path.resolve(rootDir, 'electron-builder.js');
         
-        // If it doesn't exist, create it
-        if (!fs.existsSync(electronBuilderPath)) {
+        log(`electron-builder.cjs exists: ${fs.existsSync(electronBuilderCjsPath)}`);
+        log(`electron-builder.js exists: ${fs.existsSync(electronBuilderJsPath)}`);
+        
+        // If neither exists, create electron-builder.cjs
+        if (!fs.existsSync(electronBuilderCjsPath) && !fs.existsSync(electronBuilderJsPath)) {
           log('Creating electron-builder.cjs...', true);
           
           // Check if we have a template file to copy from
           const templatePath = path.join(__dirname, 'electron-builder.cjs');
           if (fs.existsSync(templatePath)) {
-            fs.copyFileSync(templatePath, electronBuilderPath);
-            log(`Created electron-builder.cjs by copying template: ${fs.existsSync(electronBuilderPath)}`, false);
+            fs.copyFileSync(templatePath, electronBuilderCjsPath);
+            log(`Created electron-builder.cjs by copying template: ${fs.existsSync(electronBuilderCjsPath)}`, false);
           } else {
             // Create from scratch with minimal config
             const minimalConfig = `/**
@@ -48,14 +52,15 @@ async function main() {
 module.exports = {
   appId: "com.fever.audioapp",
   productName: "Fever",
+  copyright: "Copyright © 2025",
   directories: { output: "release", buildResources: "build" },
   files: ["dist/**/*", "electron/**/*", "!node_modules/**/*"],
   mac: { category: "public.app-category.music", target: ["dmg", "zip"] },
   win: { target: ["nsis"] },
   publish: [{ provider: "generic", url: "https://feverstudio.live/update" }]
 };`;
-            fs.writeFileSync(electronBuilderPath, minimalConfig);
-            log(`Created minimal electron-builder.cjs: ${fs.existsSync(electronBuilderPath)}`, false);
+            fs.writeFileSync(electronBuilderCjsPath, minimalConfig);
+            log(`Created minimal electron-builder.cjs: ${fs.existsSync(electronBuilderCjsPath)}`, false);
           }
         }
       } catch (err) {

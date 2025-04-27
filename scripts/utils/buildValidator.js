@@ -2,12 +2,13 @@
 const fs = require('fs');
 const path = require('path');
 const { log } = require('./logger');
-const { resolveFilePath } = require('./pathResolver');
 
 function validateBuildConfig(rootDir) {
   if (!rootDir) {
     throw new Error('Invalid root directory provided');
   }
+  
+  log(`Validating build config for root directory: ${rootDir}`, false);
 
   const requiredFiles = [
     'package.json',
@@ -15,18 +16,19 @@ function validateBuildConfig(rootDir) {
   ];
 
   // Check for build-electron.cjs but don't fail if it's missing
-  const buildElectronPath = path.join(rootDir, 'build-electron.cjs');
+  const buildElectronPath = path.resolve(rootDir, 'build-electron.cjs');
   if (!fs.existsSync(buildElectronPath)) {
     log(`Warning: build-electron.cjs not found at ${buildElectronPath}`, true);
   }
 
   // Check for electron-builder.cjs specifically and provide more detailed error
-  let electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.cjs');
-  if (!electronBuilderPath) {
-    electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.js');
+  let electronBuilderPath = path.resolve(rootDir, 'electron-builder.cjs');
+  if (!fs.existsSync(electronBuilderPath)) {
+    log(`electron-builder.cjs not found at ${electronBuilderPath}, checking for .js variant...`, false);
+    electronBuilderPath = path.resolve(rootDir, 'electron-builder.js');
   }
   
-  if (!electronBuilderPath) {
+  if (!fs.existsSync(electronBuilderPath)) {
     log(`Could not find electron-builder.cjs or electron-builder.js in ${rootDir}!`, true);
     log('Creating a default electron-builder.cjs config file...', false);
     
@@ -104,7 +106,7 @@ module.exports = {
   ],
 };`;
     
-    const newConfigPath = path.join(rootDir, 'electron-builder.cjs');
+    const newConfigPath = path.resolve(rootDir, 'electron-builder.cjs');
     try {
       fs.writeFileSync(newConfigPath, defaultConfig);
       log(`Created default electron-builder.cjs config file at ${newConfigPath}`, false);
@@ -114,6 +116,33 @@ module.exports = {
     }
   } else {
     log(`Found electron-builder config at: ${electronBuilderPath}`, false);
+    
+    // Try loading the config to verify it
+    try {
+      // Clear require cache to ensure we get a fresh copy
+      if (require.cache[require.resolve(electronBuilderPath)]) {
+        delete require.cache[require.resolve(electronBuilderPath)];
+        log('Cleared require cache for config file', false);
+      }
+      
+      log(`Loading electron-builder config to verify it...`, false);
+      const config = require(electronBuilderPath);
+      
+      if (!config.appId) {
+        log('Warning: Missing appId in electron-builder config', true);
+      }
+      
+      if (!config.directories) {
+        log('Warning: Missing directories in electron-builder config', true);
+      }
+      
+      if (!config.files) {
+        log('Warning: Missing files in electron-builder config', true);
+      }
+    } catch (err) {
+      log(`Error loading electron-builder config: ${err.message}`, true);
+      log('Will attempt to continue with the build process anyway', false);
+    }
   }
   
   // Check other required files
@@ -126,9 +155,13 @@ module.exports = {
   }
 
   try {
-    const packageJson = JSON.parse(
-      fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8')
-    );
+    const packageJsonPath = path.join(rootDir, 'package.json');
+    log(`Reading package.json from ${packageJsonPath}`, false);
+    
+    const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+    log(`Successfully read package.json content (${packageJsonContent.length} bytes)`, false);
+    
+    const packageJson = JSON.parse(packageJsonContent);
     
     if (!packageJson.scripts?.build) {
       throw new Error('No build script found in package.json');

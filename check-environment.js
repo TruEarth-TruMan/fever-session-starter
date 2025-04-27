@@ -5,11 +5,14 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
-console.log('=== Fever Environment Diagnostic Tool v2.1 ===');
+// Ensure we're using absolute paths for script location
+const scriptDir = __dirname;
+console.log('=== Fever Environment Diagnostic Tool v2.2 ===');
 console.log(`Current Node.js version: ${process.version}`);
 console.log(`Platform: ${process.platform} (${os.release()})`);
 console.log(`Architecture: ${process.arch}`);
 console.log(`Current working directory: ${process.cwd()}`);
+console.log(`Script directory: ${scriptDir}`);
 console.log(`Script path: ${__filename}`);
 
 // Try to get more system info
@@ -20,28 +23,41 @@ try {
   console.log(`Could not get memory info: ${err.message}`);
 }
 
+// If the cwd is not the project root, try to find it
+const projectRoot = process.cwd();
+console.log(`Using project root: ${projectRoot}`);
+
 // Check if we're in the project root
-const isProjectRoot = fs.existsSync(path.join(process.cwd(), 'package.json')) && 
-                      fs.existsSync(path.join(process.cwd(), 'vite.config.ts'));
+const isProjectRoot = fs.existsSync(path.join(projectRoot, 'package.json')) && 
+                      fs.existsSync(path.join(projectRoot, 'vite.config.ts'));
 
 console.log(`Is current directory project root? ${isProjectRoot ? 'YES' : 'NO'}`);
 
 // List key project files
 console.log('\nChecking for key project files:');
 ['package.json', 'vite.config.ts', 'electron-builder.cjs', 'electron-builder.js', 'build.js', 'build-electron.cjs'].forEach(file => {
-  const exists = fs.existsSync(path.join(process.cwd(), file));
+  const exists = fs.existsSync(path.join(projectRoot, file));
   console.log(`- ${file}: ${exists ? '✅ Found' : '❌ Missing'}`);
   
   if (exists) {
     try {
-      const stats = fs.statSync(path.join(process.cwd(), file));
+      const stats = fs.statSync(path.join(projectRoot, file));
       console.log(`  - Size: ${stats.size} bytes, Modified: ${stats.mtime}`);
       
       // For JS files, try to require them and see if there's an error
       if (file.endsWith('.js') || file.endsWith('.cjs')) {
         console.log(`  - Attempting to require ${file}...`);
         try {
-          require(path.join(process.cwd(), file));
+          // Use full absolute path for require to avoid confusion
+          const fullPath = path.resolve(projectRoot, file);
+          console.log(`  - Full path: ${fullPath}`);
+          
+          // Clear require cache to ensure we get a fresh copy
+          if (require.cache[require.resolve(fullPath)]) {
+            delete require.cache[require.resolve(fullPath)];
+          }
+          
+          require(fullPath);
           console.log(`  - ✅ Successfully required ${file}`);
         } catch (err) {
           console.log(`  - ❌ Error requiring ${file}: ${err.message}`);
@@ -126,7 +142,7 @@ if (!isProjectRoot) {
 
 // Try to create or verify electron-builder.cjs
 console.log('\nChecking/creating electron-builder.cjs:');
-const configPath = path.join(process.cwd(), 'electron-builder.cjs');
+const configPath = path.join(projectRoot, 'electron-builder.cjs');
 if (!fs.existsSync(configPath)) {
   console.log(`Creating electron-builder.cjs at ${configPath}`);
   const defaultConfig = `/**
@@ -166,7 +182,7 @@ module.exports = {
 }
 
 console.log('\nTesting file write access:');
-const testFile = path.join(process.cwd(), 'test-write-access.txt');
+const testFile = path.join(projectRoot, 'test-write-access.txt');
 try {
   fs.writeFileSync(testFile, 'Test write access');
   console.log(`✅ Successfully wrote to test file`);
@@ -179,7 +195,7 @@ try {
 // Test require function with a built-in module
 console.log('\nTesting require function with built-in modules:');
 try {
-  const fs = require('fs');
+  const testFs = require('fs');
   console.log('✅ Successfully required fs module');
 } catch (err) {
   console.log(`❌ Error requiring fs: ${err.message}`);

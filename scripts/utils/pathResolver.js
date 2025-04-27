@@ -1,109 +1,67 @@
-
 const fs = require('fs');
 const path = require('path');
 
 /**
- * Resolves and validates the project root directory
+ * Resolves the project root directory
+ * @param {string} forcedPath - A path that is forced to be used as the root directory
+ * @returns {string} The resolved project root directory
  */
-function resolveProjectRoot(forceRootDir) {
-  // Check if a specific root directory was provided
-  if (forceRootDir && isValidProjectRoot(forceRootDir)) {
-    console.log(`Using provided root directory: ${forceRootDir}`);
-    return forceRootDir;
+function resolveProjectRoot(forcedPath) {
+  // Use the forced path if provided and it exists
+  if (forcedPath && fs.existsSync(forcedPath)) {
+    console.log(`Using forced root directory: ${forcedPath}`);
+    return forcedPath;
   }
 
-  // Try common locations
-  const possibleRootDirs = [
-    process.cwd(),
-    path.dirname(path.dirname(__dirname)), // Go up two levels from scripts/utils
-    path.dirname(__dirname),
-    path.join(process.cwd(), '..'),
-    path.resolve(process.cwd(), '..'),
-    // Add specific path for this project as seen in the error
-    'C:\\Users\\robbi\\fever-session-starter',
-  ];
-
-  console.log('Searching for valid project root directory...');
-  for (const dir of possibleRootDirs) {
-    try {
-      if (isValidProjectRoot(dir)) {
-        console.log(`Found valid project root at: ${dir}`);
-        return dir;
-      }
-    } catch (err) {
-      console.error(`Error checking directory ${dir}: ${err.message}`);
-    }
+  // Otherwise use the current working directory
+  const cwd = process.cwd();
+  console.log(`Using current directory as root: ${cwd}`);
+  
+  // Check if the current directory has package.json and vite.config.ts
+  const isProjectRoot = fs.existsSync(path.join(cwd, 'package.json')) && 
+                        fs.existsSync(path.join(cwd, 'vite.config.ts'));
+  
+  if (!isProjectRoot) {
+    console.warn(`Warning: Current directory doesn't appear to be a valid project root`);
+    console.warn(`Missing package.json: ${!fs.existsSync(path.join(cwd, 'package.json'))}`);
+    console.warn(`Missing vite.config.ts: ${!fs.existsSync(path.join(cwd, 'vite.config.ts'))}`);
   }
   
-  return null;
+  return cwd;
 }
 
 /**
- * Validates if a directory is a valid project root
- * by checking for essential project files
+ * Resolves a file path within the project
+ * @param {string} rootDir - The root directory of the project
+ * @param {string} filePath - The relative file path to resolve
+ * @returns {string|null} The resolved file path or null if not found
  */
-function isValidProjectRoot(dir) {
-  if (!dir) return false;
+function resolveFilePath(rootDir, filePath) {
+  if (!rootDir || typeof rootDir !== 'string') {
+    console.error('Error: Invalid rootDir provided to resolveFilePath');
+    return null;
+  }
+  
+  const fullPath = path.join(rootDir, filePath);
+  console.log(`Checking for file at: ${fullPath}`);
+  
+  if (fs.existsSync(fullPath)) {
+    return fullPath;
+  }
+  
+  // Log a more detailed error message
+  console.error(`File not found: ${fullPath}`);
+  console.log(`Directory exists: ${fs.existsSync(path.dirname(fullPath))}`);
   
   try {
-    // Log the contents of the directory to help debug
-    console.log(`Checking directory ${dir}`);
-    if (fs.existsSync(dir)) {
-      const files = fs.readdirSync(dir);
-      console.log(`Files in ${dir}: ${files.join(', ')}`);
-      
-      // Check for essential project files
-      const hasPackageJson = fs.existsSync(path.join(dir, 'package.json'));
-      const hasViteConfig = fs.existsSync(path.join(dir, 'vite.config.ts')) || 
-                          fs.existsSync(path.join(dir, 'vite.config.js'));
-      
-      console.log(`Package.json exists: ${hasPackageJson}`);
-      console.log(`Vite config exists: ${hasViteConfig}`);
-      
-      // Return true as long as we have package.json and vite.config
-      // Don't require electron-builder.js since we'll create it if missing
-      return hasPackageJson && hasViteConfig;
-    }
-    return false;
-  } catch (error) {
-    console.error(`Error validating project root: ${error}`);
-    return false;
-  }
-}
-
-/**
- * Resolves a specific file path relative to project root
- */
-function resolveFilePath(rootDir, filename) {
-  if (!rootDir || !filename) return null;
-  
-  // Try the direct path first
-  const filePath = path.join(rootDir, filename);
-  if (fs.existsSync(filePath)) {
-    return filePath;
+    // List directory contents to help debugging
+    const dirContents = fs.readdirSync(path.dirname(fullPath));
+    console.log(`Files in directory: ${dirContents.join(', ')}`);
+  } catch (err) {
+    console.error(`Error reading directory: ${err.message}`);
   }
   
-  // Try common alternative locations
-  const alternatives = [
-    path.join(rootDir, 'config', filename),
-    path.join(rootDir, 'scripts', filename),
-    path.join(rootDir, 'build', filename),
-    path.join(path.dirname(rootDir), filename)
-  ];
-  
-  // More detailed logging for debugging
-  console.log(`Direct path ${filePath} not found, trying alternatives...`);
-  
-  for (const alt of alternatives) {
-    console.log(`Checking alternative path: ${alt}`);
-    if (fs.existsSync(alt)) {
-      console.log(`Found ${filename} at alternative location: ${alt}`);
-      return alt;
-    }
-  }
-  
-  console.log(`${filename} not found in any expected location`);
   return null;
 }
 
-module.exports = { resolveProjectRoot, resolveFilePath, isValidProjectRoot };
+module.exports = { resolveProjectRoot, resolveFilePath };

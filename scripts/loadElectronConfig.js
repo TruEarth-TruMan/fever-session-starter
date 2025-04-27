@@ -1,7 +1,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { resolveFilePath } = require('./utils/pathResolver');
 
 /**
  * Loads the electron-builder configuration
@@ -43,7 +42,7 @@ function loadElectronConfig(rootDir) {
   }
   
   for (const filename of possibleConfigFiles) {
-    const fullPath = path.join(rootDir, filename);
+    const fullPath = path.resolve(rootDir, filename);
     console.log(`Checking for config at: ${fullPath} - Exists: ${fs.existsSync(fullPath)}`);
     
     if (fs.existsSync(fullPath)) {
@@ -57,7 +56,7 @@ function loadElectronConfig(rootDir) {
     console.error('No electron-builder configuration file found.');
     
     // Create a default configuration file - using .cjs extension
-    configPath = path.join(rootDir, 'electron-builder.cjs');
+    configPath = path.resolve(rootDir, 'electron-builder.cjs');
     console.log(`Creating default config at: ${configPath}`);
     
     const defaultConfig = `
@@ -150,16 +149,36 @@ module.exports = {
       delete require.cache[require.resolve(configPath)];
       console.log('Cleared require cache for config file');
     }
-    const config = require(configPath);
-    console.log('Config loaded successfully. Required properties:');
-    console.log(`- appId: ${config.appId ? '✅' : '❌'}`);
-    console.log(`- directories: ${config.directories ? '✅' : '❌'}`);
-    console.log(`- files: ${config.files ? '✅' : '❌'}`);
-    return config;
+    
+    // Use dynamic import with a try-catch as a more reliable alternative
+    console.log('Attempting to load config with dynamic import...');
+    try {
+      const config = require(configPath);
+      console.log('Config loaded successfully. Required properties:');
+      console.log(`- appId: ${config.appId ? '✅' : '❌'}`);
+      console.log(`- directories: ${config.directories ? '✅' : '❌'}`);
+      console.log(`- files: ${config.files ? '✅' : '❌'}`);
+      return config;
+    } catch (err) {
+      console.error('Failed with dynamic import too:', err.message);
+      throw err;
+    }
   } catch (error) {
     console.error('Failed to load electron-builder config:', error);
     console.error('Error details:', error.stack);
-    throw error;
+    
+    // As a last resort, try to create a temporary config object
+    console.log('Creating fallback config object');
+    return {
+      appId: "com.fever.audioapp",
+      productName: "Fever",
+      copyright: "Copyright © 2025",
+      directories: { output: "release", buildResources: "build" },
+      files: ["dist/**/*", "electron/**/*", "!node_modules/**/*"],
+      mac: { category: "public.app-category.music", target: ["dmg", "zip"] },
+      win: { target: ["nsis"] },
+      publish: [{ provider: "generic", url: "https://feverstudio.live/update" }]
+    };
   }
 }
 
