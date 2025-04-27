@@ -4,11 +4,46 @@ const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
 
-// Import the required modules - ensure these paths are correct
-const { setupBuildDirectories } = require('./scripts/setupBuildDirs');
-const { generateMacOSEntitlements } = require('./scripts/generateEntitlements');
-const { generateUpdateExample } = require('./scripts/generateUpdateExample');
-const config = require('./electron-builder.js');
+// Define path to scripts directory and ensure it exists
+const scriptsDir = path.resolve(__dirname, 'scripts');
+if (!fs.existsSync(scriptsDir)) {
+  console.error(`Scripts directory not found at ${scriptsDir}`);
+  process.exit(1);
+}
+
+// Explicitly require each module with full path
+const setupBuildDirsPath = path.resolve(scriptsDir, 'setupBuildDirs.js');
+const generateEntitlementsPath = path.resolve(scriptsDir, 'generateEntitlements.js');
+const generateUpdateExamplePath = path.resolve(scriptsDir, 'generateUpdateExample.js');
+
+// Verify each module file exists before requiring
+if (!fs.existsSync(setupBuildDirsPath)) {
+  console.error(`Module not found: ${setupBuildDirsPath}`);
+  process.exit(1);
+}
+
+if (!fs.existsSync(generateEntitlementsPath)) {
+  console.error(`Module not found: ${generateEntitlementsPath}`);
+  process.exit(1);
+}
+
+if (!fs.existsSync(generateUpdateExamplePath)) {
+  console.error(`Module not found: ${generateUpdateExamplePath}`);
+  process.exit(1);
+}
+
+// Now require the modules
+const { setupBuildDirectories } = require(setupBuildDirsPath);
+const { generateMacOSEntitlements } = require(generateEntitlementsPath);
+const { generateUpdateExample } = require(generateUpdateExamplePath);
+
+// Config file
+const configPath = path.resolve(__dirname, 'electron-builder.js');
+if (!fs.existsSync(configPath)) {
+  console.error(`Config not found: ${configPath}`);
+  process.exit(1);
+}
+const config = require(configPath);
 
 // Create output directories if they don't exist
 const ensureDirectoriesExist = () => {
@@ -31,6 +66,12 @@ async function buildApp() {
     // Set up build environment
     console.log('Setting up build environment...');
     const rootDir = __dirname;
+    
+    // Verify setupBuildDirectories function exists
+    if (typeof setupBuildDirectories !== 'function') {
+      throw new Error('setupBuildDirectories is not a function');
+    }
+    
     const { buildDir } = setupBuildDirectories(rootDir);
 
     // Generate required files
@@ -65,7 +106,6 @@ async function buildApp() {
       console.log(` - ${result.file} (${(result.size / 1024 / 1024).toFixed(2)} MB)`);
     });
 
-    // Copy artifacts to public download folders if needed
     console.log('You can find the installers in the "release" directory.');
     console.log('To make them available for auto-updates and downloads, copy:');
     console.log(' - Windows installers to: public/download/win/');

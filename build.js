@@ -11,13 +11,14 @@ try {
   execSync('npm run build', { stdio: 'inherit' });
   
   console.log('\n2. Running Electron build...');
-  const buildElectronPath = path.resolve(__dirname, 'build-electron.cjs');
+  const buildElectronPath = path.resolve(__dirname, './build-electron.cjs');
   
   // Verify that the file exists before trying to execute it
   if (!fs.existsSync(buildElectronPath)) {
     throw new Error(`Could not find build-electron.cjs at path: ${buildElectronPath}`);
   }
   
+  console.log(`Executing build script: ${buildElectronPath}`);
   execSync(`node "${buildElectronPath}"`, { stdio: 'inherit' });
   
   console.log('\n✓ Build completed successfully!');

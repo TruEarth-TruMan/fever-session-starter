@@ -2,7 +2,13 @@
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Generates the macOS entitlements file needed for code signing
+ * @param {string} buildDir - The build directory where entitlements will be saved
+ */
 function generateMacOSEntitlements(buildDir) {
+  console.log(`Generating macOS entitlements in ${buildDir}`);
+  
   const entitlementsPath = path.join(buildDir, 'entitlements.mac.plist');
   const entitlementsContent = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -21,8 +27,9 @@ function generateMacOSEntitlements(buildDir) {
   </dict>
 </plist>`;
 
+  console.log(`Writing entitlements file to: ${entitlementsPath}`);
   fs.writeFileSync(entitlementsPath, entitlementsContent);
+  console.log(`Generated entitlements file at ${entitlementsPath}`);
 }
 
 module.exports = { generateMacOSEntitlements };
-

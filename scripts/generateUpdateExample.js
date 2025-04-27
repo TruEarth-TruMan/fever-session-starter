@@ -2,14 +2,30 @@
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Generates the update manifest for auto-updates
+ * @param {string} rootDir - The root directory of the project
+ */
 function generateUpdateExample(rootDir) {
+  console.log(`Generating update example in ${rootDir}`);
+  
   // Get package.json version or use default
   let currentVersion = '1.0.1';
   try {
-    const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8'));
-    currentVersion = packageJson.version || currentVersion;
+    const packageJsonPath = path.join(rootDir, 'package.json');
+    console.log(`Reading package.json from: ${packageJsonPath}`);
+    
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent);
+      currentVersion = packageJson.version || currentVersion;
+      console.log(`Found version in package.json: ${currentVersion}`);
+    } else {
+      console.warn(`package.json not found at ${packageJsonPath}, using default version: ${currentVersion}`);
+    }
   } catch (error) {
-    console.warn('Could not read version from package.json, using default:', currentVersion);
+    console.warn(`Could not read version from package.json, using default: ${currentVersion}`);
+    console.error(error);
   }
 
   // Create update manifest
@@ -34,6 +50,7 @@ function generateUpdateExample(rootDir) {
     }
   };
 
+  console.log(`Writing update manifest to: ${updateJsonPath}`);
   fs.writeFileSync(
     updateJsonPath, 
     JSON.stringify(updateJsonContent, null, 2),
@@ -45,6 +62,14 @@ function generateUpdateExample(rootDir) {
   // Also copy to public directory for serving during development
   const publicUpdatePath = path.join(rootDir, 'public', 'fever-update.json');
   try {
+    // Ensure public directory exists
+    const publicDir = path.join(rootDir, 'public');
+    if (!fs.existsSync(publicDir)) {
+      console.log(`Creating public directory: ${publicDir}`);
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    
+    console.log(`Copying update manifest to: ${publicUpdatePath}`);
     fs.writeFileSync(
       publicUpdatePath, 
       JSON.stringify(updateJsonContent, null, 2),
