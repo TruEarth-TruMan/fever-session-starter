@@ -2,6 +2,7 @@
 // Simple build script to help run the Electron build process
 const { execSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 console.log('Starting Fever build process...');
 
@@ -11,6 +12,12 @@ try {
   
   console.log('\n2. Running Electron build...');
   const buildElectronPath = path.join(__dirname, 'build-electron.cjs');
+  
+  // Verify that the file exists before trying to execute it
+  if (!fs.existsSync(buildElectronPath)) {
+    throw new Error(`Could not find build-electron.cjs at path: ${buildElectronPath}`);
+  }
+  
   execSync(`node "${buildElectronPath}"`, { stdio: 'inherit' });
   
   console.log('\n✓ Build completed successfully!');
