@@ -18,12 +18,12 @@ function loadElectronConfig(rootDir) {
   
   // Try multiple file extensions and names
   const possibleConfigFiles = [
-    'electron-builder.js',
     'electron-builder.cjs',
-    'electron-builder.config.js',
+    'electron-builder.js',
     'electron-builder.config.cjs',
-    'electronBuilder.js',
-    'electronBuilder.cjs'
+    'electron-builder.config.js',
+    'electronBuilder.cjs',
+    'electronBuilder.js'
   ];
   
   let configPath = null;
@@ -49,32 +49,85 @@ function loadElectronConfig(rootDir) {
   if (!configPath) {
     console.error('No electron-builder configuration file found.');
     
-    // Create a default configuration file
-    configPath = path.join(rootDir, 'electron-builder.js');
+    // Create a default configuration file - using .cjs extension for clarity
+    configPath = path.join(rootDir, 'electron-builder.cjs');
     const defaultConfig = `
+/**
+ * Fever Application Packaging Configuration
+ * 
+ * This configuration file works with electron-builder to package
+ * the application for distribution on macOS and Windows.
+ */
+
+// Export the configuration object for electron-builder
 module.exports = {
   appId: "com.fever.audioapp",
   productName: "Fever",
-  directories: { 
-    output: "release", 
-    buildResources: "build" 
+  copyright: "Copyright © 2025",
+  
+  // Icon configuration for all platforms
+  icon: "build/icons/icon",
+  
+  // Electron Builder configuration settings
+  directories: {
+    output: "release", // Where the packaged apps will be placed
+    buildResources: "build", // Where to find icons and other resources
   },
+  
+  // Files to include in the build
   files: [
-    "dist/**/*", 
-    "electron/**/*", 
-    "!node_modules/**/*"
+    "dist/**/*", // Built Vite app
+    "electron/**/*", // Electron main process files
+    "!node_modules/**/*", // Exclude node_modules
   ],
-  mac: { 
-    category: "public.app-category.music", 
-    target: ["dmg", "zip"] 
+  
+  // macOS specific configuration
+  mac: {
+    category: "public.app-category.music",
+    target: [
+      { target: "dmg", arch: ["x64", "arm64"] },
+      { target: "zip", arch: ["x64", "arm64"] }
+    ],
+    artifactName: "Fever-\${version}-\${arch}.\${ext}",
+    darkModeSupport: true,
+    hardenedRuntime: true,
+    gatekeeperAssess: false,
+    entitlements: "build/entitlements.mac.plist",
+    entitlementsInherit: "build/entitlements.mac.plist",
+    notarize: false,
+    icon: "build/icons/icon.icns",
   },
-  win: { 
-    target: ["nsis"] 
+  
+  // Windows specific configuration
+  win: {
+    target: [
+      { target: "nsis", arch: ["x64"] }
+    ],
+    artifactName: "Fever-\${version}-setup.\${ext}",
+    icon: "build/icons/icon.ico",
   },
-  publish: [{ 
-    provider: "generic", 
-    url: "https://feverstudio.live/update" 
-  }]
+  
+  // NSIS installer configuration for Windows
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: "Fever",
+    installerIcon: "build/icons/icon.ico",
+    uninstallerIcon: "build/icons/icon.ico",
+    installerHeaderIcon: "build/icons/icon.ico",
+    uninstallDisplayName: "Fever \${version}",
+  },
+  
+  // App update configuration
+  publish: [
+    {
+      provider: "generic",
+      url: "https://feverstudio.live/update",
+      channel: "latest",
+    }
+  ],
 };`;
     
     try {

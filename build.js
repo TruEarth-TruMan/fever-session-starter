@@ -28,19 +28,19 @@ async function main() {
       try {
         log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
         
-        // Check for electron-builder.js specifically
-        const electronBuilderPath = path.join(rootDir, 'electron-builder.js');
-        log(`electron-builder.js exists: ${fs.existsSync(electronBuilderPath)}`);
+        // Check for electron-builder.cjs specifically
+        const electronBuilderPath = path.join(rootDir, 'electron-builder.cjs');
+        log(`electron-builder.cjs exists: ${fs.existsSync(electronBuilderPath)}`);
         
         // If it doesn't exist, create it
         if (!fs.existsSync(electronBuilderPath)) {
-          log('Creating electron-builder.js...', true);
+          log('Creating electron-builder.cjs...', true);
           
           // Check if we have a template file to copy from
-          const templatePath = path.join(__dirname, 'electron-builder.js');
+          const templatePath = path.join(__dirname, 'electron-builder.cjs');
           if (fs.existsSync(templatePath)) {
             fs.copyFileSync(templatePath, electronBuilderPath);
-            log(`Created electron-builder.js by copying template: ${fs.existsSync(electronBuilderPath)}`, false);
+            log(`Created electron-builder.cjs by copying template: ${fs.existsSync(electronBuilderPath)}`, false);
           } else {
             // Create from scratch with minimal config
             const minimalConfig = `/**
@@ -56,7 +56,7 @@ module.exports = {
   publish: [{ provider: "generic", url: "https://feverstudio.live/update" }]
 };`;
             fs.writeFileSync(electronBuilderPath, minimalConfig);
-            log(`Created minimal electron-builder.js: ${fs.existsSync(electronBuilderPath)}`, false);
+            log(`Created minimal electron-builder.cjs: ${fs.existsSync(electronBuilderPath)}`, false);
           }
         }
       } catch (err) {

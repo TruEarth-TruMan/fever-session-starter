@@ -28,4 +28,3 @@ function executeBuild(rootDir, isDryRun = false) {
 }
 
 module.exports = { executeBuild };
-

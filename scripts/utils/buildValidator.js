@@ -15,13 +15,13 @@ function validateBuildConfig(rootDir) {
     'build-electron.cjs'
   ];
 
-  // Check for electron-builder.js specifically and provide more detailed error
-  const electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.js');
+  // Check for electron-builder.cjs specifically and provide more detailed error
+  const electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.cjs');
   if (!electronBuilderPath) {
-    log(`Could not find electron-builder.js in ${rootDir} or common subdirectories!`, true);
-    log('Creating a default electron-builder.js config file...', false);
+    log(`Could not find electron-builder.cjs in ${rootDir} or common subdirectories!`, true);
+    log('Creating a default electron-builder.cjs config file...', false);
     
-    // Create a default electron-builder.js if it doesn't exist
+    // Create a default electron-builder.cjs if it doesn't exist
     const defaultConfig = `/**
  * Fever Application Packaging Configuration
  * 
@@ -98,13 +98,12 @@ module.exports = {
       channel: "latest",
     }
   ],
-};
-`;
+};`;
     
-    fs.writeFileSync(path.join(rootDir, 'electron-builder.js'), defaultConfig);
-    log('Created default electron-builder.js config file', false);
+    fs.writeFileSync(path.join(rootDir, 'electron-builder.cjs'), defaultConfig);
+    log('Created default electron-builder.cjs config file', false);
   } else {
-    log(`Found electron-builder.js at: ${electronBuilderPath}`, false);
+    log(`Found electron-builder.cjs at: ${electronBuilderPath}`, false);
   }
   
   // Check other required files
