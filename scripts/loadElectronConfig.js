@@ -17,36 +17,53 @@ function loadElectronConfig(rootDir) {
     console.error(`Root directory: ${rootDir}`);
     console.error(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
     
-    // Try to find the config file elsewhere
-    const parentDir = path.dirname(rootDir);
-    console.log(`Checking parent directory: ${parentDir}`);
-    if (fs.existsSync(parentDir)) {
-      console.log(`Files in parent directory: ${fs.readdirSync(parentDir).join(', ')}`);
-      
-      // Look for fever-session-starter directory
-      const feverDir = path.join(parentDir, 'fever-session-starter');
-      if (fs.existsSync(feverDir)) {
-        console.log(`Found fever-session-starter directory at ${feverDir}`);
-        console.log(`Files in fever-session-starter: ${fs.readdirSync(feverDir).join(', ')}`);
-        
-        const altConfigPath = path.join(feverDir, 'electron-builder.js');
-        if (fs.existsSync(altConfigPath)) {
-          console.log(`Found config at alternate location: ${altConfigPath}`);
-          try {
-            const config = require(altConfigPath);
-            return config;
-          } catch (err) {
-            console.error(`Failed to load alternate config: ${err.message}`);
-          }
-        }
-      }
+    // Create a minimal config if the file doesn't exist
+    console.log('Creating a minimal electron-builder config file...');
+    const minimalConfig = `
+module.exports = {
+  appId: "com.fever.audioapp",
+  productName: "Fever",
+  copyright: "Copyright © 2025",
+  directories: {
+    output: "release",
+    buildResources: "build",
+  },
+  files: [
+    "dist/**/*",
+    "electron/**/*",
+    "!node_modules/**/*",
+  ],
+  mac: {
+    category: "public.app-category.music",
+    target: ["dmg", "zip"],
+  },
+  win: {
+    target: ["nsis"],
+  },
+  publish: [
+    {
+      provider: "generic",
+      url: "https://feverstudio.live/update",
     }
+  ],
+};`;
     
-    process.exit(1);
+    fs.writeFileSync(configPath, minimalConfig);
+    console.log(`Created minimal config at: ${configPath}`);
+    
+    try {
+      const config = require(configPath);
+      return config;
+    } catch (err) {
+      console.error(`Failed to load newly created config: ${err.message}`);
+      process.exit(1);
+    }
   }
   
   try {
     console.log(`Loading electron-builder config from ${configPath}`);
+    // Use dynamic import to avoid caching issues
+    delete require.cache[require.resolve(configPath)];
     const config = require(configPath);
     return config;
   } catch (error) {

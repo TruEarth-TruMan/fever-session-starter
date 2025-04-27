@@ -8,23 +8,62 @@ const fs = require('fs');
 
 console.log('Starting Fever build process...');
 
-// Get absolute path to the project root directory
-const rootDir = path.resolve(__dirname);
-console.log(`Starting directory: ${process.cwd()}`);
-console.log(`Script location: ${__dirname}`);
-console.log(`Detected root directory: ${rootDir}`);
+// Get absolute path to the project directory
+const currentDir = process.cwd();
+console.log(`Current working directory: ${currentDir}`);
 
-// Check if we're in fever-session-starter folder
-if (rootDir.includes('fever-session-starter')) {
-  console.log('✓ Correct project directory detected: fever-session-starter');
-} else {
-  console.log('⚠️ Warning: Not running from fever-session-starter directory');
-  console.log('Current directory structure:');
-  console.log(`Files in directory: ${fs.readdirSync(rootDir).join(', ')}`);
+// Try to determine the root directory
+let rootDir = currentDir;
+
+// Check if we're in the correct directory by looking for key project files
+const isProjectRoot = (dir) => {
+  return fs.existsSync(path.join(dir, 'package.json')) && 
+         fs.existsSync(path.join(dir, 'electron-builder.js'));
+};
+
+// If current directory isn't the project root, try to find it
+if (!isProjectRoot(rootDir)) {
+  console.log('Not in the project root directory. Attempting to locate it...');
+  
+  // Check if we're in a subdirectory of the project
+  const possibleRoot = path.resolve(rootDir, '..');
+  if (isProjectRoot(possibleRoot)) {
+    rootDir = possibleRoot;
+    console.log(`Found project root at parent directory: ${rootDir}`);
+  } else {
+    // Check if fever-session-starter exists in parent or sibling directories
+    const parentDir = path.dirname(rootDir);
+    const feverDir = path.join(parentDir, 'fever-session-starter');
+    
+    if (fs.existsSync(feverDir) && isProjectRoot(feverDir)) {
+      rootDir = feverDir;
+      console.log(`Found project root at fever-session-starter: ${rootDir}`);
+    } else {
+      console.error('ERROR: Could not locate the project root directory.');
+      console.error('Please run this script from the fever-session-starter directory.');
+      console.error(`Current directory: ${currentDir}`);
+      console.error(`Files in current directory: ${fs.readdirSync(currentDir).join(', ')}`);
+      process.exit(1);
+    }
+  }
 }
 
+console.log(`Using project root directory: ${rootDir}`);
+console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+
+// Change to the root directory
 process.chdir(rootDir);
 console.log(`Changed working directory to: ${process.cwd()}`);
+
+// Verify we have the necessary files
+const requiredFiles = ['package.json', 'electron-builder.js', 'vite.config.ts'];
+const missingFiles = requiredFiles.filter(file => !fs.existsSync(path.join(rootDir, file)));
+
+if (missingFiles.length > 0) {
+  console.error(`ERROR: Missing required files: ${missingFiles.join(', ')}`);
+  console.error('Cannot proceed with build process.');
+  process.exit(1);
+}
 
 try {
   console.log('\n1. Running Vite build...');

@@ -14,41 +14,37 @@ function checkViteBuild(rootDir) {
   if (!fs.existsSync(distPath)) {
     console.log('Vite build not found. Running build process...');
     
-    // Try alternate path if in a different directory structure
-    const altDistPath = path.join(rootDir, '..', 'fever-session-starter', 'dist', 'index.html');
-    if (fs.existsSync(altDistPath)) {
-      console.log(`Found Vite build at alternate location: ${altDistPath}`);
-      return;
+    // Check if package.json has a build script
+    const packageJsonPath = path.join(rootDir, 'package.json');
+    
+    if (!fs.existsSync(packageJsonPath)) {
+      console.error(`ERROR: package.json not found at ${packageJsonPath}`);
+      console.error('Cannot run the build process without package.json');
+      process.exit(1);
     }
     
     try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+      
+      if (!packageJson.scripts || !packageJson.scripts.build) {
+        console.error('ERROR: No build script found in package.json');
+        console.error('Please add a "build" script to your package.json');
+        process.exit(1);
+      }
+      
       console.log(`Executing npm run build in directory: ${rootDir}`);
       execSync('npm run build', { stdio: 'inherit', cwd: rootDir });
+      
+      // Verify build was successful
+      if (!fs.existsSync(distPath)) {
+        console.error('ERROR: Vite build failed to create dist/index.html');
+        console.error('Check for errors in the build process');
+        process.exit(1);
+      }
+      
     } catch (error) {
       console.error('Vite build failed:', error.message);
       console.error('Full error details:', error);
-      
-      // Try finding the correct directory
-      console.log('Trying to locate correct directory structure...');
-      const parentDir = path.dirname(rootDir);
-      console.log(`Parent directory: ${parentDir}`);
-      if (fs.existsSync(parentDir)) {
-        console.log(`Files in parent directory: ${fs.readdirSync(parentDir).join(', ')}`);
-        
-        // Check for fever-session-starter
-        const feverDir = path.join(parentDir, 'fever-session-starter');
-        if (fs.existsSync(feverDir)) {
-          console.log(`Found fever-session-starter directory at ${feverDir}`);
-          try {
-            execSync('npm run build', { stdio: 'inherit', cwd: feverDir });
-            console.log('Vite build succeeded in correct directory');
-            return;
-          } catch (err) {
-            console.error(`Build failed in alternate directory: ${err.message}`);
-          }
-        }
-      }
-      
       process.exit(1);
     }
   } else {

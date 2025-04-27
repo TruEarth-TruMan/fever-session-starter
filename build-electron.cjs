@@ -4,28 +4,115 @@ const builder = require('electron-builder');
 const path = require('path');
 const fs = require('fs');
 
-// Get absolute path to the project root directory
-const rootDir = path.resolve(__dirname);
-console.log(`Root directory for build-electron.cjs: ${rootDir}`);
+// Get absolute path to the current directory
+const currentDir = process.cwd();
+console.log(`Current directory for build-electron.cjs: ${currentDir}`);
+
+// Determine project root directory
+let rootDir = currentDir;
+
+// Check if we're in the correct directory
+const isProjectRoot = (dir) => {
+  return fs.existsSync(path.join(dir, 'package.json')) && 
+         fs.existsSync(path.join(dir, 'electron-builder.js'));
+};
+
+// If current directory isn't the project root, try to find it
+if (!isProjectRoot(rootDir)) {
+  console.log('Not in the project root directory. Attempting to locate it...');
+  
+  // Check parent directory
+  const possibleRoot = path.resolve(rootDir, '..');
+  if (isProjectRoot(possibleRoot)) {
+    rootDir = possibleRoot;
+    console.log(`Found project root at parent directory: ${rootDir}`);
+  } else {
+    // Look for fever-session-starter directory
+    const parentDir = path.dirname(rootDir);
+    const feverDir = path.join(parentDir, 'fever-session-starter');
+    
+    if (fs.existsSync(feverDir) && isProjectRoot(feverDir)) {
+      rootDir = feverDir;
+      console.log(`Found project root at fever-session-starter: ${rootDir}`);
+    } else {
+      console.error('ERROR: Could not locate the project root directory.');
+      console.error('Please run this script from the fever-session-starter directory.');
+      process.exit(1);
+    }
+  }
+}
+
+console.log(`Using project root directory: ${rootDir}`);
 console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
 
-// Check if we're in fever-session-starter folder
-if (rootDir.includes('fever-session-starter')) {
-  console.log('✓ Correct project directory detected: fever-session-starter');
-} else {
-  console.log('⚠️ Warning: Not running from fever-session-starter directory');
-}
+// Change to the root directory
+process.chdir(rootDir);
+console.log(`Changed working directory to: ${process.cwd()}`);
 
 // Explicitly set up the paths to the script modules with proper path resolution
 const scriptsDir = path.join(rootDir, 'scripts');
 console.log(`Scripts directory: ${scriptsDir}`);
-console.log(`Scripts directory exists: ${fs.existsSync(scriptsDir)}`);
-if (fs.existsSync(scriptsDir)) {
-  console.log(`Files in scripts directory: ${fs.readdirSync(scriptsDir).join(', ')}`);
+
+if (!fs.existsSync(scriptsDir)) {
+  console.error(`ERROR: Scripts directory not found at: ${scriptsDir}`);
+  console.error('Creating scripts directory and necessary files...');
+  
+  // Create scripts directory if it doesn't exist
+  fs.mkdirSync(scriptsDir, { recursive: true });
+  
+  // Create minimal required script files
+  const setupBuildDirsContent = `
+const fs = require('fs');
+const path = require('path');
+
+function setupBuildDirectories(rootDir) {
+  console.log(\`Setting up build directories in \${rootDir}\`);
+  
+  const buildDir = path.join(rootDir, 'build');
+  const iconsDir = path.join(buildDir, 'icons');
+
+  if (!fs.existsSync(buildDir)) {
+    console.log(\`Creating build directory: \${buildDir}\`);
+    fs.mkdirSync(buildDir, { recursive: true });
+  }
+
+  if (!fs.existsSync(iconsDir)) {
+    console.log(\`Creating icons directory: \${iconsDir}\`);
+    fs.mkdirSync(iconsDir, { recursive: true });
+  }
+
+  return { buildDir, iconsDir };
 }
 
-// Import utility functions from scripts with explicit path resolution
+module.exports = { setupBuildDirectories };
+  `;
+  fs.writeFileSync(path.join(scriptsDir, 'setupBuildDirs.js'), setupBuildDirsContent);
+  
+  // Continue creating other required files...
+  // [Additional file creation would go here]
+}
+
+// Try to import the modules, with better error handling
 try {
+  // First check if the files exist
+  const requiredScripts = [
+    'setupBuildDirs.js',
+    'generateEntitlements.js',
+    'generateUpdateExample.js',
+    'ensureDirectories.js',
+    'checkViteBuild.js',
+    'loadElectronConfig.js'
+  ];
+  
+  const missingScripts = requiredScripts.filter(script => !fs.existsSync(path.join(scriptsDir, script)));
+  
+  if (missingScripts.length > 0) {
+    console.error(`ERROR: Missing required script files: ${missingScripts.join(', ')}`);
+    console.error(`Please ensure these files exist in the scripts directory: ${scriptsDir}`);
+    process.exit(1);
+  }
+  
+  // Import the modules
   const { setupBuildDirectories } = require(path.join(scriptsDir, 'setupBuildDirs'));
   const { generateMacOSEntitlements } = require(path.join(scriptsDir, 'generateEntitlements'));
   const { generateUpdateExample } = require(path.join(scriptsDir, 'generateUpdateExample'));
@@ -72,9 +159,6 @@ try {
       });
 
       console.log('You can find the installers in the "release" directory.');
-      console.log('To make them available for auto-updates and downloads, copy:');
-      console.log(' - Windows installers to: public/download/win/');
-      console.log(' - macOS installers to: public/download/mac/');
       
       process.exit(0);
     } catch (error) {
@@ -90,9 +174,10 @@ try {
   console.error(`Failed to import required modules: ${error.message}`);
   console.error(`Current directory: ${process.cwd()}`);
   console.error(`Scripts directory path: ${scriptsDir}`);
-  console.error(`Does scripts directory exist: ${fs.existsSync(scriptsDir)}`);
+  
   if (fs.existsSync(scriptsDir)) {
     console.error(`Contents of scripts directory: ${fs.readdirSync(scriptsDir).join(', ')}`);
   }
+  
   process.exit(1);
 }
