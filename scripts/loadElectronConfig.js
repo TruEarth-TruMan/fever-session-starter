@@ -1,3 +1,4 @@
+
 const fs = require('fs');
 const path = require('path');
 const { resolveFilePath } = require('./utils/pathResolver');
@@ -15,13 +16,13 @@ function loadElectronConfig(rootDir) {
     console.log(`Falling back to current directory: ${rootDir}`);
   }
   
-  // Update possible config file names to prioritize .cjs
+  // Strictly prioritize .cjs files first before checking .js files
   const possibleConfigFiles = [
     'electron-builder.cjs',
-    'electron-builder.js',
     'electron-builder.config.cjs',
-    'electron-builder.config.js',
     'electronBuilder.cjs',
+    'electron-builder.js',
+    'electron-builder.config.js',
     'electronBuilder.js'
   ];
   
@@ -29,18 +30,19 @@ function loadElectronConfig(rootDir) {
   
   for (const filename of possibleConfigFiles) {
     const fullPath = path.join(rootDir, filename);
-    const resolvedPath = resolveFilePath(rootDir, filename);
-    
-    console.log(`Checking for config at: ${fullPath}`);
-    console.log(`Resolved path: ${resolvedPath}`);
+    console.log(`Checking for config at: ${fullPath} - Exists: ${fs.existsSync(fullPath)}`);
     
     if (fs.existsSync(fullPath)) {
       configPath = fullPath;
+      console.log(`Found electron-builder config at: ${configPath}`);
       break;
     }
     
+    // Also check using resolveFilePath which checks in subdirectories
+    const resolvedPath = resolveFilePath(rootDir, filename);
     if (resolvedPath && fs.existsSync(resolvedPath)) {
       configPath = resolvedPath;
+      console.log(`Found electron-builder config at resolved path: ${configPath}`);
       break;
     }
   }
@@ -50,6 +52,8 @@ function loadElectronConfig(rootDir) {
     
     // Create a default configuration file - using .cjs extension
     configPath = path.join(rootDir, 'electron-builder.cjs');
+    console.log(`Creating default config at: ${configPath}`);
+    
     const defaultConfig = `
 /**
  * Fever Application Packaging Configuration
@@ -139,6 +143,7 @@ module.exports = {
     return config;
   } catch (error) {
     console.error('Failed to load electron-builder config:', error);
+    console.error('Error details:', error.stack);
     throw error;
   }
 }

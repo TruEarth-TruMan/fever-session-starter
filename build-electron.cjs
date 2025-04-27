@@ -61,6 +61,28 @@ if (!fs.existsSync(scriptsDir)) {
   fs.mkdirSync(scriptsDir, { recursive: true });
 }
 
+// Check for electron-builder config explicitly
+console.log('Checking for electron-builder config files:');
+const possibleConfigs = [
+  'electron-builder.cjs', 
+  'electron-builder.js', 
+  'electron-builder.config.cjs',
+  'electron-builder.config.js'
+];
+
+let configFound = false;
+for (const configFile of possibleConfigs) {
+  const configPath = path.join(rootDir, configFile);
+  console.log(`Checking ${configFile}: ${fs.existsSync(configPath) ? 'EXISTS' : 'NOT FOUND'}`);
+  if (fs.existsSync(configPath)) {
+    configFound = true;
+  }
+}
+
+if (!configFound) {
+  console.log('No electron-builder config found, will create one automatically during build process');
+}
+
 // Main build process
 async function buildApp() {
   try {
