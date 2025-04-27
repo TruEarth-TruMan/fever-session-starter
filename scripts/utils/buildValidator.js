@@ -11,25 +11,29 @@ function validateBuildConfig(rootDir) {
 
   const requiredFiles = [
     'package.json',
-    'vite.config.ts',
-    'build-electron.cjs'
+    'vite.config.ts'
   ];
 
+  // Check for build-electron.cjs but don't fail if it's missing
+  const buildElectronPath = path.join(rootDir, 'build-electron.cjs');
+  if (!fs.existsSync(buildElectronPath)) {
+    log(`Warning: build-electron.cjs not found at ${buildElectronPath}`, true);
+  }
+
   // Check for electron-builder.cjs specifically and provide more detailed error
-  const electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.cjs');
+  let electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.cjs');
   if (!electronBuilderPath) {
-    log(`Could not find electron-builder.cjs in ${rootDir} or common subdirectories!`, true);
+    electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.js');
+  }
+  
+  if (!electronBuilderPath) {
+    log(`Could not find electron-builder.cjs or electron-builder.js in ${rootDir}!`, true);
     log('Creating a default electron-builder.cjs config file...', false);
     
     // Create a default electron-builder.cjs if it doesn't exist
     const defaultConfig = `/**
  * Fever Application Packaging Configuration
- * 
- * This configuration file works with electron-builder to package
- * the application for distribution on macOS and Windows.
  */
-
-// Export the configuration object for electron-builder
 module.exports = {
   appId: "com.fever.audioapp",
   productName: "Fever",
@@ -100,10 +104,16 @@ module.exports = {
   ],
 };`;
     
-    fs.writeFileSync(path.join(rootDir, 'electron-builder.cjs'), defaultConfig);
-    log('Created default electron-builder.cjs config file', false);
+    const newConfigPath = path.join(rootDir, 'electron-builder.cjs');
+    try {
+      fs.writeFileSync(newConfigPath, defaultConfig);
+      log(`Created default electron-builder.cjs config file at ${newConfigPath}`, false);
+      electronBuilderPath = newConfigPath;
+    } catch (err) {
+      log(`Failed to create default config: ${err.message}`, true);
+    }
   } else {
-    log(`Found electron-builder.cjs at: ${electronBuilderPath}`, false);
+    log(`Found electron-builder config at: ${electronBuilderPath}`, false);
   }
   
   // Check other required files

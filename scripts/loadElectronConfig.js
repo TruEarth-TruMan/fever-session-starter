@@ -16,6 +16,9 @@ function loadElectronConfig(rootDir) {
     console.log(`Falling back to current directory: ${rootDir}`);
   }
   
+  console.log(`Current working directory: ${process.cwd()}`);
+  console.log(`Looking for electron-builder config in: ${rootDir}`);
+  
   // Strictly prioritize .cjs files first before checking .js files
   const possibleConfigFiles = [
     'electron-builder.cjs',
@@ -28,6 +31,17 @@ function loadElectronConfig(rootDir) {
   
   let configPath = null;
   
+  // List all files in the root directory for debugging
+  try {
+    console.log(`Files in ${rootDir}:`);
+    const dirFiles = fs.readdirSync(rootDir);
+    dirFiles.forEach(file => {
+      console.log(`- ${file}`);
+    });
+  } catch (err) {
+    console.error(`Error reading directory: ${err.message}`);
+  }
+  
   for (const filename of possibleConfigFiles) {
     const fullPath = path.join(rootDir, filename);
     console.log(`Checking for config at: ${fullPath} - Exists: ${fs.existsSync(fullPath)}`);
@@ -35,14 +49,6 @@ function loadElectronConfig(rootDir) {
     if (fs.existsSync(fullPath)) {
       configPath = fullPath;
       console.log(`Found electron-builder config at: ${configPath}`);
-      break;
-    }
-    
-    // Also check using resolveFilePath which checks in subdirectories
-    const resolvedPath = resolveFilePath(rootDir, filename);
-    if (resolvedPath && fs.existsSync(resolvedPath)) {
-      configPath = resolvedPath;
-      console.log(`Found electron-builder config at resolved path: ${configPath}`);
       break;
     }
   }
@@ -133,13 +139,22 @@ module.exports = {
       console.log(`Created default electron-builder config at: ${configPath}`);
     } catch (err) {
       console.error(`Failed to create default config: ${err.message}`);
+      throw new Error(`Could not create default electron-builder config: ${err.message}`);
     }
   }
   
   try {
     console.log(`Loading config from: ${configPath}`);
-    delete require.cache[require.resolve(configPath)];
+    // Clear require cache to ensure we get a fresh copy
+    if (require.cache[require.resolve(configPath)]) {
+      delete require.cache[require.resolve(configPath)];
+      console.log('Cleared require cache for config file');
+    }
     const config = require(configPath);
+    console.log('Config loaded successfully. Required properties:');
+    console.log(`- appId: ${config.appId ? '✅' : '❌'}`);
+    console.log(`- directories: ${config.directories ? '✅' : '❌'}`);
+    console.log(`- files: ${config.files ? '✅' : '❌'}`);
     return config;
   } catch (error) {
     console.error('Failed to load electron-builder config:', error);

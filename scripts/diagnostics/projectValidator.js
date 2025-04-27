@@ -20,6 +20,11 @@ function validateProjectRoot(rootDir) {
 
   const hasElectronBuilderConfig = files.electronBuilderCjs || files.electronBuilderJs;
   console.log(`- Has electron-builder config: ${hasElectronBuilderConfig ? '✅' : '❌'}`);
+  
+  if (!hasElectronBuilderConfig) {
+    console.log('WARNING: No electron-builder configuration file found!');
+    console.log('Will attempt to create a default one during the build process.');
+  }
 
   return files.packageJson && files.viteConfig;
 }

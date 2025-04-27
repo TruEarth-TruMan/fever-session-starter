@@ -30,12 +30,72 @@ if (!rootDir) {
   rootDir = process.cwd();
 }
 
+console.log(`Using root directory: ${rootDir}`);
+console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+
+// Check for electron-builder config explicitly
+console.log('\nChecking for electron-builder config files:');
+const possibleConfigs = ['electron-builder.cjs', 'electron-builder.js'];
+let configFound = false;
+let foundConfigPath = null;
+
+for (const configFile of possibleConfigs) {
+  const configPath = path.join(rootDir, configFile);
+  const exists = fs.existsSync(configPath);
+  console.log(`- ${configFile}: ${exists ? '✅ Found' : '❌ Missing'}`);
+  
+  if (exists) {
+    configFound = true;
+    foundConfigPath = configPath;
+    
+    // Try to load it
+    try {
+      delete require.cache[require.resolve(configPath)];
+      const config = require(configPath);
+      console.log(`  - ✅ Successfully loaded ${configFile}`);
+      console.log(`  - Config has appId: ${config.appId ? '✅' : '❌'}`);
+      console.log(`  - Config has directories: ${config.directories ? '✅' : '❌'}`);
+      console.log(`  - Config has files: ${config.files ? '✅' : '❌'}`);
+    } catch (err) {
+      console.log(`  - ❌ Error loading ${configFile}: ${err.message}`);
+    }
+  }
+}
+
+if (!configFound) {
+  console.log('\n❌ No electron-builder config found, creating default one...');
+  const defaultConfigPath = path.join(rootDir, 'electron-builder.cjs');
+  
+  const defaultConfig = `/**
+ * Fever Application Packaging Configuration
+ */
+module.exports = {
+  appId: "com.fever.audioapp",
+  productName: "Fever",
+  copyright: "Copyright © 2025",
+  directories: { output: "release", buildResources: "build" },
+  files: ["dist/**/*", "electron/**/*", "!node_modules/**/*"],
+  mac: { category: "public.app-category.music", target: ["dmg", "zip"] },
+  win: { target: ["nsis"] },
+  publish: [{ provider: "generic", url: "https://feverstudio.live/update" }]
+};`;
+
+  try {
+    fs.writeFileSync(defaultConfigPath, defaultConfig);
+    console.log(`✅ Created electron-builder.cjs at ${defaultConfigPath}`);
+    foundConfigPath = defaultConfigPath;
+  } catch (err) {
+    console.log(`❌ Error creating config: ${err.message}`);
+  }
+}
+
 // Run diagnostic checks
+console.log('\nRunning diagnostic checks...');
 const projectValid = validateProjectRoot(rootDir);
 const { missingDeps, scripts } = checkDependencies(rootDir);
 const nodeCompatible = checkNodeCompatibility(rootDir);
 const directories = validateDirectoryStructure(rootDir);
-const configValid = validateElectronBuilderConfig(rootDir);
+const configValid = foundConfigPath ? validateElectronBuilderConfig(rootDir) : false;
 
 // Final report
 console.log(`\n=== Diagnosis Summary ===`);
@@ -64,7 +124,10 @@ if (isReady) {
     console.log(`- Set up missing directory structure`);
   }
   if (!configValid) {
-    console.log(`- Fix electron-builder.js configuration issues`);
+    console.log(`- Fix electron-builder configuration issues`);
+    if (foundConfigPath) {
+      console.log(`  Config file: ${foundConfigPath}`);
+    }
   }
 }
 

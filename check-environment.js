@@ -1,10 +1,11 @@
 
+#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
-console.log('=== Fever Environment Diagnostic Tool v2 ===');
+console.log('=== Fever Environment Diagnostic Tool v2.1 ===');
 console.log(`Current Node.js version: ${process.version}`);
 console.log(`Platform: ${process.platform} (${os.release()})`);
 console.log(`Architecture: ${process.arch}`);
@@ -27,7 +28,7 @@ console.log(`Is current directory project root? ${isProjectRoot ? 'YES' : 'NO'}`
 
 // List key project files
 console.log('\nChecking for key project files:');
-['package.json', 'vite.config.ts', 'electron-builder.js', 'build.js', 'build-electron.cjs'].forEach(file => {
+['package.json', 'vite.config.ts', 'electron-builder.cjs', 'electron-builder.js', 'build.js', 'build-electron.cjs'].forEach(file => {
   const exists = fs.existsSync(path.join(process.cwd(), file));
   console.log(`- ${file}: ${exists ? '✅ Found' : '❌ Missing'}`);
   
@@ -77,6 +78,22 @@ if (!isProjectRoot) {
         console.log(`\n✅ Found project root at: ${dir}`);
         console.log('Try running the build script from this directory.');
         
+        // Check for electron-builder config files
+        console.log('\nChecking for electron-builder config files:');
+        ['electron-builder.cjs', 'electron-builder.js'].forEach(configFile => {
+          const configPath = path.join(dir, configFile);
+          console.log(`- ${configFile}: ${fs.existsSync(configPath) ? '✅ Found' : '❌ Missing'}`);
+          
+          if (fs.existsSync(configPath)) {
+            try {
+              require(configPath);
+              console.log(`  - ✅ Successfully loaded ${configFile}`);
+            } catch (err) {
+              console.log(`  - ❌ Error loading ${configFile}: ${err.message}`);
+            }
+          }
+        });
+        
         // List scripts in package.json
         try {
           const packageJson = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'));
@@ -107,110 +124,44 @@ if (!isProjectRoot) {
   }
 }
 
-// Try to read the build.js file and explain its content
-try {
-  console.log('\nAnalyzing build.js file:');
-  const buildFilePath = path.join(process.cwd(), 'build.js');
-  if (fs.existsSync(buildFilePath)) {
-    const content = fs.readFileSync(buildFilePath, 'utf8');
-    const lines = content.split('\n').length;
-    console.log(`- File exists, ${lines} lines`);
-    console.log('- Checking key patterns:');
-    console.log(`  - Contains 'execSync': ${content.includes('execSync')}`);
-    console.log(`  - Contains 'child_process': ${content.includes('child_process')}`);
-    console.log(`  - Contains 'rootDir': ${content.includes('rootDir')}`);
-    console.log(`  - Contains 'process.exit': ${content.includes('process.exit')}`);
-    
-    // Try to execute a small portion to test Node execution
-    console.log('\nTesting Node.js execution with a simple script:');
-    try {
-      execSync('node -e "console.log(\'Node.js execution test successful\')"', { stdio: 'inherit' });
-    } catch (err) {
-      console.log(`❌ Error executing Node.js test: ${err.message}`);
-    }
-  } else {
-    console.log(`❌ build.js file not found at ${buildFilePath}`);
-  }
-} catch (err) {
-  console.log(`Error analyzing build.js: ${err.message}`);
-}
+// Try to create or verify electron-builder.cjs
+console.log('\nChecking/creating electron-builder.cjs:');
+const configPath = path.join(process.cwd(), 'electron-builder.cjs');
+if (!fs.existsSync(configPath)) {
+  console.log(`Creating electron-builder.cjs at ${configPath}`);
+  const defaultConfig = `/**
+ * Fever Application Packaging Configuration
+ */
+module.exports = {
+  appId: "com.fever.audioapp",
+  productName: "Fever",
+  copyright: "Copyright © 2025",
+  directories: { output: "release", buildResources: "build" },
+  files: ["dist/**/*", "electron/**/*", "!node_modules/**/*"],
+  mac: { category: "public.app-category.music", target: ["dmg", "zip"] },
+  win: { target: ["nsis"] },
+  publish: [{ provider: "generic", url: "https://feverstudio.live/update" }]
+};`;
 
-// Check for Electron files
-console.log('\nChecking Electron files:');
-const electronDir = path.join(process.cwd(), 'electron');
-if (fs.existsSync(electronDir)) {
-  console.log(`✅ Electron directory exists`);
-  const electronFiles = fs.readdirSync(electronDir).filter(file => file.endsWith('.ts'));
-  console.log(`Electron source files: ${electronFiles.join(', ')}`);
-  
-  // Check the content of main.ts
-  const mainTsPath = path.join(electronDir, 'main.ts');
-  if (fs.existsSync(mainTsPath)) {
+  try {
+    fs.writeFileSync(configPath, defaultConfig);
+    console.log(`✅ Created electron-builder.cjs successfully`);
     try {
-      const content = fs.readFileSync(mainTsPath, 'utf8');
-      console.log(`- main.ts: ${content.includes('createWindow') ? '✅ Has createWindow function' : '❌ No createWindow function'}`);
-      console.log(`- main.ts: ${content.includes('app.whenReady') ? '✅ Has app.whenReady' : '❌ No app.whenReady'}`);
+      const config = require(configPath);
+      console.log(`✅ Loaded config successfully: ${config ? 'Valid object' : 'Invalid'}`);
     } catch (err) {
-      console.log(`- Error reading main.ts: ${err.message}`);
+      console.log(`❌ Error loading created config: ${err.message}`);
     }
-  } else {
-    console.log(`- ❌ main.ts file missing`);
+  } catch (err) {
+    console.log(`❌ Error creating config: ${err.message}`);
   }
 } else {
-  console.log(`❌ Electron directory missing at ${electronDir}`);
-  
-  // Try to find it elsewhere
-  const altElectronDir = path.join(process.cwd(), '..', 'electron');
-  if (fs.existsSync(altElectronDir)) {
-    console.log(`✅ Found Electron directory at ${altElectronDir}`);
-  }
-}
-
-// Check scripts directory
-console.log('\nChecking scripts directory:');
-const scriptsDir = path.join(process.cwd(), 'scripts');
-if (fs.existsSync(scriptsDir)) {
-  console.log(`✅ Scripts directory exists`);
-  const scriptFiles = fs.readdirSync(scriptsDir);
-  console.log(`Script files: ${scriptFiles.join(', ')}`);
-  
-  // Check the critical scripts
-  ['checkViteBuild.js', 'loadElectronConfig.js'].forEach(file => {
-    const filePath = path.join(scriptsDir, file);
-    if (fs.existsSync(filePath)) {
-      console.log(`- ${file}: ✅ Found`);
-      
-      // Try requiring the script
-      try {
-        console.log(`  - Attempting to require ${file}...`);
-        require(filePath);
-        console.log(`  - ✅ Successfully required ${file}`);
-      } catch (err) {
-        console.log(`  - ❌ Error requiring ${file}: ${err.message}`);
-      }
-    } else {
-      console.log(`- ${file}: ❌ Missing`);
-    }
-  });
-} else {
-  console.log(`❌ Scripts directory missing at ${scriptsDir}`);
-  console.log('Creating scripts directory...');
+  console.log(`electron-builder.cjs exists at ${configPath}`);
   try {
-    fs.mkdirSync(scriptsDir, { recursive: true });
-    console.log('✅ Scripts directory created');
+    const config = require(configPath);
+    console.log(`✅ Loaded config successfully: ${config ? 'Valid object' : 'Invalid'}`);
   } catch (err) {
-    console.log(`❌ Error creating scripts directory: ${err.message}`);
-  }
-}
-
-// Check for permission issues (works on Unix-like systems)
-if (process.platform !== 'win32') {
-  console.log('\nChecking file permissions:');
-  try {
-    const execPermission = execSync(`ls -la ${process.cwd()}/build.js`, { encoding: 'utf8' });
-    console.log(`build.js permissions: ${execPermission.trim()}`);
-  } catch (err) {
-    console.log(`Error checking permissions: ${err.message}`);
+    console.log(`❌ Error loading existing config: ${err.message}`);
   }
 }
 
@@ -225,7 +176,15 @@ try {
   console.log(`❌ Error with file write/delete: ${err.message}`);
 }
 
+// Test require function with a built-in module
+console.log('\nTesting require function with built-in modules:');
+try {
+  const fs = require('fs');
+  console.log('✅ Successfully required fs module');
+} catch (err) {
+  console.log(`❌ Error requiring fs: ${err.message}`);
+}
+
 console.log('\n=== Diagnostic Complete ===');
-console.log('Run this diagnostic from your project root directory to verify your environment.');
 console.log('If you need to run build.js with the correct path, try:');
-console.log('node build.js --root="C:\\Users\\robbi\\fever-session-starter"');
+console.log('node build.js --debug --root="YOUR_PROJECT_PATH"');
