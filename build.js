@@ -1,6 +1,7 @@
 
 // Simple build script to help run the Electron build process
 const { execSync } = require('child_process');
+const path = require('path');
 
 console.log('Starting Fever build process...');
 
@@ -9,7 +10,8 @@ try {
   execSync('npm run build', { stdio: 'inherit' });
   
   console.log('\n2. Running Electron build...');
-  execSync('node build-electron.cjs', { stdio: 'inherit' });
+  const buildElectronPath = path.join(__dirname, 'build-electron.cjs');
+  execSync(`node "${buildElectronPath}"`, { stdio: 'inherit' });
   
   console.log('\n✓ Build completed successfully!');
   console.log('\nInstallers are located in the "release" directory.');
