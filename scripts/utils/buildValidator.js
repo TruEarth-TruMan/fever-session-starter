@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { log } = require('./logger');
+const { resolveFilePath } = require('./pathResolver');
 
 function validateBuildConfig(rootDir) {
   if (!rootDir) {
@@ -10,11 +11,103 @@ function validateBuildConfig(rootDir) {
 
   const requiredFiles = [
     'package.json',
-    'electron-builder.js',
     'vite.config.ts',
     'build-electron.cjs'
   ];
 
+  // Check for electron-builder.js specifically and provide more detailed error
+  const electronBuilderPath = resolveFilePath(rootDir, 'electron-builder.js');
+  if (!electronBuilderPath) {
+    log(`Could not find electron-builder.js in ${rootDir} or common subdirectories!`, true);
+    log('Creating a default electron-builder.js config file...', false);
+    
+    // Create a default electron-builder.js if it doesn't exist
+    const defaultConfig = `/**
+ * Fever Application Packaging Configuration
+ * 
+ * This configuration file works with electron-builder to package
+ * the application for distribution on macOS and Windows.
+ */
+
+// Export the configuration object for electron-builder
+module.exports = {
+  appId: "com.fever.audioapp",
+  productName: "Fever",
+  copyright: "Copyright © 2025",
+  
+  // Icon configuration for all platforms
+  icon: "build/icons/icon",
+  
+  // Electron Builder configuration settings
+  directories: {
+    output: "release", // Where the packaged apps will be placed
+    buildResources: "build", // Where to find icons and other resources
+  },
+  
+  // Files to include in the build
+  files: [
+    "dist/**/*", // Built Vite app
+    "electron/**/*", // Electron main process files
+    "!node_modules/**/*", // Exclude node_modules
+  ],
+  
+  // macOS specific configuration
+  mac: {
+    category: "public.app-category.music",
+    target: [
+      { target: "dmg", arch: ["x64", "arm64"] },
+      { target: "zip", arch: ["x64", "arm64"] }
+    ],
+    artifactName: "Fever-\${version}-\${arch}.\${ext}",
+    darkModeSupport: true,
+    hardenedRuntime: true,
+    gatekeeperAssess: false,
+    entitlements: "build/entitlements.mac.plist",
+    entitlementsInherit: "build/entitlements.mac.plist",
+    notarize: false,
+    icon: "build/icons/icon.icns",
+  },
+  
+  // Windows specific configuration
+  win: {
+    target: [
+      { target: "nsis", arch: ["x64"] }
+    ],
+    artifactName: "Fever-\${version}-setup.\${ext}",
+    icon: "build/icons/icon.ico",
+  },
+  
+  // NSIS installer configuration for Windows
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: "Fever",
+    installerIcon: "build/icons/icon.ico",
+    uninstallerIcon: "build/icons/icon.ico",
+    installerHeaderIcon: "build/icons/icon.ico",
+    uninstallDisplayName: "Fever \${version}",
+  },
+  
+  // App update configuration
+  publish: [
+    {
+      provider: "generic",
+      url: "https://feverstudio.live/update",
+      channel: "latest",
+    }
+  ],
+};
+`;
+    
+    fs.writeFileSync(path.join(rootDir, 'electron-builder.js'), defaultConfig);
+    log('Created default electron-builder.js config file', false);
+  } else {
+    log(`Found electron-builder.js at: ${electronBuilderPath}`, false);
+  }
+  
+  // Check other required files
   const missingFiles = requiredFiles.filter(file => 
     !fs.existsSync(path.join(rootDir, file))
   );
@@ -39,4 +132,3 @@ function validateBuildConfig(rootDir) {
 }
 
 module.exports = { validateBuildConfig };
-

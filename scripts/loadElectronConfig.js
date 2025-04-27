@@ -1,6 +1,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { resolveFilePath } = require('./utils/pathResolver');
 
 /**
  * Loads the electron-builder configuration
@@ -15,31 +16,23 @@ function loadElectronConfig(rootDir) {
     console.log(`Falling back to current directory: ${rootDir}`);
   }
   
-  const configPath = path.join(rootDir, 'electron-builder.js');
-  console.log(`Loading config from: ${configPath}`);
+  // Try to find the config file in various locations
+  let configPath = resolveFilePath(rootDir, 'electron-builder.js');
   
-  if (!fs.existsSync(configPath)) {
-    console.error(`Config not found: ${configPath}`);
+  if (!configPath) {
+    console.error(`Config not found at ${path.join(rootDir, 'electron-builder.js')}`);
     console.error(`Current directory: ${process.cwd()}`);
     console.error(`Root directory: ${rootDir}`);
-    console.error(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
     
-    // Try to find in parent directory
-    const parentConfigPath = path.join(path.dirname(rootDir), 'electron-builder.js');
-    if (fs.existsSync(parentConfigPath)) {
-      console.log(`Found config in parent directory: ${parentConfigPath}`);
-      try {
-        // Use dynamic import to avoid caching issues
-        delete require.cache[require.resolve(parentConfigPath)];
-        const config = require(parentConfigPath);
-        return config;
-      } catch (err) {
-        console.error(`Failed to load config from parent directory: ${err.message}`);
-        throw err;
-      }
+    // Check files in root directory for debugging
+    try {
+      console.error(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+    } catch (err) {
+      console.error(`Error reading directory: ${err.message}`);
     }
     
-    // Create a minimal config if the file doesn't exist
+    // Create a minimal config as a fallback
+    configPath = path.join(rootDir, 'electron-builder.js');
     console.log('Creating a minimal electron-builder config file...');
     const minimalConfig = `
 module.exports = {
@@ -70,15 +63,12 @@ module.exports = {
   ],
 };`;
     
-    fs.writeFileSync(configPath, minimalConfig);
-    console.log(`Created minimal config at: ${configPath}`);
-    
     try {
-      const config = require(configPath);
-      return config;
+      fs.writeFileSync(configPath, minimalConfig);
+      console.log(`Created minimal config at: ${configPath}`);
     } catch (err) {
-      console.error(`Failed to load newly created config: ${err.message}`);
-      throw new Error(`Failed to load config: ${err.message}`);
+      console.error(`Failed to write config: ${err.message}`);
+      throw new Error(`Failed to create config: ${err.message}`);
     }
   }
   

@@ -5,6 +5,8 @@ const { resolveProjectRoot } = require('./scripts/utils/pathResolver');
 const { validateBuildConfig } = require('./scripts/utils/buildValidator');
 const { executeBuild } = require('./scripts/utils/buildExecutor');
 const { verifyDependencies } = require('./scripts/verifyDependencies');
+const fs = require('fs');
+const path = require('path');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -20,6 +22,29 @@ async function main() {
       throw new Error('Could not determine project root directory');
     }
     log(`Using project root directory: ${rootDir}`);
+    
+    // Log directory contents for debugging
+    if (debugMode) {
+      try {
+        log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+        
+        // Check for electron-builder.js specifically
+        const electronBuilderPath = path.join(rootDir, 'electron-builder.js');
+        log(`electron-builder.js exists: ${fs.existsSync(electronBuilderPath)}`);
+        
+        // If it doesn't exist, create it
+        if (!fs.existsSync(electronBuilderPath)) {
+          log('Creating electron-builder.js...', true);
+          fs.copyFileSync(
+            path.join(__dirname, 'electron-builder.js'), 
+            electronBuilderPath
+          );
+          log(`Created electron-builder.js: ${fs.existsSync(electronBuilderPath)}`, false);
+        }
+      } catch (err) {
+        log(`Error reading directory: ${err.message}`, true);
+      }
+    }
 
     // Validate build configuration
     validateBuildConfig(rootDir);
@@ -42,4 +67,3 @@ async function main() {
 }
 
 main();
-
