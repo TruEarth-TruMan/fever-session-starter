@@ -1,6 +1,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const { checkBasicConfig } = require('./checks/config/basicConfigChecks');
+const { checkModuleFormat } = require('./checks/config/moduleFormatCheck');
 
 function validateElectronBuilderConfig(rootDir) {
   console.log(`\n5. Checking electron-builder.js configuration`);
@@ -8,26 +10,13 @@ function validateElectronBuilderConfig(rootDir) {
     const configPath = path.join(rootDir, 'electron-builder.js');
     const configContent = fs.readFileSync(configPath, 'utf-8');
     
-    const checks = {
-      appId: configContent.includes('appId:'),
-      productName: configContent.includes('productName:'),
-      directories: configContent.includes('directories:'),
-      files: configContent.includes('files:'),
-      mac: configContent.includes('mac:'),
-      win: configContent.includes('win:'),
-      publish: configContent.includes('publish:')
-    };
+    // Check basic configuration requirements
+    const checks = checkBasicConfig(configContent);
     
-    Object.entries(checks).forEach(([key, exists]) => {
-      console.log(`- ${key}: ${exists ? '✅' : '❌'}`);
-    });
+    // Check module format
+    const hasValidModuleFormat = checkModuleFormat(configContent);
     
-    if (!configContent.includes('module.exports =')) {
-      console.log(`❌ WARNING: electron-builder.js may not be using CommonJS format!`);
-      return false;
-    }
-    
-    return Object.values(checks).every(Boolean);
+    return Object.values(checks).every(Boolean) && hasValidModuleFormat;
   } catch (err) {
     console.log(`❌ Error analyzing electron-builder.js: ${err.message}`);
     return false;
