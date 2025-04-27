@@ -1,44 +1,138 @@
 
+#!/usr/bin/env node
+// Electron Builder script
+
 const builder = require('electron-builder');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
 
-// Define path to scripts directory and ensure it exists
-const scriptsDir = path.resolve(__dirname, 'scripts');
-if (!fs.existsSync(scriptsDir)) {
-  console.error(`Scripts directory not found at ${scriptsDir}`);
-  process.exit(1);
+// Inline the required functions to avoid module resolution issues
+// Setup build directories
+function setupBuildDirectories(rootDir) {
+  console.log(`Setting up build directories in ${rootDir}`);
+  
+  const buildDir = path.join(rootDir, 'build');
+  const iconsDir = path.join(buildDir, 'icons');
+
+  if (!fs.existsSync(buildDir)) {
+    console.log(`Creating build directory: ${buildDir}`);
+    fs.mkdirSync(buildDir, { recursive: true });
+  }
+
+  if (!fs.existsSync(iconsDir)) {
+    console.log(`Creating icons directory: ${iconsDir}`);
+    fs.mkdirSync(iconsDir, { recursive: true });
+  }
+
+  return { buildDir, iconsDir };
 }
 
-// Explicitly require each module with full path
-const setupBuildDirsPath = path.resolve(scriptsDir, 'setupBuildDirs.js');
-const generateEntitlementsPath = path.resolve(scriptsDir, 'generateEntitlements.js');
-const generateUpdateExamplePath = path.resolve(scriptsDir, 'generateUpdateExample.js');
+// Generate macOS entitlements
+function generateMacOSEntitlements(buildDir) {
+  console.log(`Generating macOS entitlements in ${buildDir}`);
+  
+  const entitlementsPath = path.join(buildDir, 'entitlements.mac.plist');
+  const entitlementsContent = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+  </dict>
+</plist>`;
 
-// Verify each module file exists before requiring
-if (!fs.existsSync(setupBuildDirsPath)) {
-  console.error(`Module not found: ${setupBuildDirsPath}`);
-  process.exit(1);
+  console.log(`Writing entitlements file to: ${entitlementsPath}`);
+  fs.writeFileSync(entitlementsPath, entitlementsContent);
+  console.log(`Generated entitlements file at ${entitlementsPath}`);
 }
 
-if (!fs.existsSync(generateEntitlementsPath)) {
-  console.error(`Module not found: ${generateEntitlementsPath}`);
-  process.exit(1);
-}
+// Generate update example
+function generateUpdateExample(rootDir) {
+  console.log(`Generating update example in ${rootDir}`);
+  
+  // Get package.json version or use default
+  let currentVersion = '1.0.1';
+  try {
+    const packageJsonPath = path.join(rootDir, 'package.json');
+    console.log(`Reading package.json from: ${packageJsonPath}`);
+    
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent);
+      currentVersion = packageJson.version || currentVersion;
+      console.log(`Found version in package.json: ${currentVersion}`);
+    } else {
+      console.warn(`package.json not found at ${packageJsonPath}, using default version: ${currentVersion}`);
+    }
+  } catch (error) {
+    console.warn(`Could not read version from package.json, using default: ${currentVersion}`);
+    console.error(error);
+  }
 
-if (!fs.existsSync(generateUpdateExamplePath)) {
-  console.error(`Module not found: ${generateUpdateExamplePath}`);
-  process.exit(1);
-}
+  // Create update manifest
+  const updateJsonPath = path.join(rootDir, 'fever-update.json');
+  const updateJsonContent = {
+    version: currentVersion,
+    notes: "New version with bug fixes and performance improvements",
+    releaseDate: new Date().toISOString(),
+    platforms: {
+      "darwin-x64": {
+        url: `https://feverstudio.live/download/mac/Fever-${currentVersion}-x64.dmg`,
+        signature: "", // Optional: Add code signing signature here
+      },
+      "darwin-arm64": {
+        url: `https://feverstudio.live/download/mac/Fever-${currentVersion}-arm64.dmg`,
+        signature: "", // Optional: Add code signing signature here
+      },
+      "win32-x64": {
+        url: `https://feverstudio.live/download/win/Fever-${currentVersion}-setup.exe`,
+        signature: "", // Optional: Add code signing signature here
+      }
+    }
+  };
 
-// Now require the modules
-const { setupBuildDirectories } = require(setupBuildDirsPath);
-const { generateMacOSEntitlements } = require(generateEntitlementsPath);
-const { generateUpdateExample } = require(generateUpdateExamplePath);
+  console.log(`Writing update manifest to: ${updateJsonPath}`);
+  fs.writeFileSync(
+    updateJsonPath, 
+    JSON.stringify(updateJsonContent, null, 2),
+    'utf-8'
+  );
+  
+  console.log(`Generated update manifest at ${updateJsonPath}`);
+  
+  // Also copy to public directory for serving during development
+  const publicUpdatePath = path.join(rootDir, 'public', 'fever-update.json');
+  try {
+    // Ensure public directory exists
+    const publicDir = path.join(rootDir, 'public');
+    if (!fs.existsSync(publicDir)) {
+      console.log(`Creating public directory: ${publicDir}`);
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    
+    console.log(`Copying update manifest to: ${publicUpdatePath}`);
+    fs.writeFileSync(
+      publicUpdatePath, 
+      JSON.stringify(updateJsonContent, null, 2),
+      'utf-8'
+    );
+    console.log(`Copied update manifest to ${publicUpdatePath} for development`);
+  } catch (error) {
+    console.warn(`Could not copy update manifest to public directory: ${error.message}`);
+  }
+}
 
 // Config file
-const configPath = path.resolve(__dirname, 'electron-builder.js');
+const configPath = path.join(__dirname, 'electron-builder.js');
 if (!fs.existsSync(configPath)) {
   console.error(`Config not found: ${configPath}`);
   process.exit(1);
@@ -63,16 +157,15 @@ const ensureDirectoriesExist = () => {
 // Main build process
 async function buildApp() {
   try {
-    // Set up build environment
+    // Set up build environment with more detailed logging
     console.log('Setting up build environment...');
-    const rootDir = __dirname;
+    console.log(`Current directory: ${__dirname}`);
     
-    // Verify setupBuildDirectories function exists
-    if (typeof setupBuildDirectories !== 'function') {
-      throw new Error('setupBuildDirectories is not a function');
-    }
+    const rootDir = __dirname;
+    console.log(`Root directory: ${rootDir}`);
     
     const { buildDir } = setupBuildDirectories(rootDir);
+    console.log(`Build directory created: ${buildDir}`);
 
     // Generate required files
     console.log('Generating entitlements and update manifest...');
@@ -83,7 +176,10 @@ async function buildApp() {
     ensureDirectoriesExist();
 
     // Check if Vite build exists, if not, run it
-    if (!fs.existsSync(path.join(__dirname, 'dist', 'index.html'))) {
+    const distPath = path.join(__dirname, 'dist', 'index.html');
+    console.log(`Checking for Vite build at: ${distPath}`);
+    
+    if (!fs.existsSync(distPath)) {
       console.log('Vite build not found. Running build process...');
       try {
         execSync('npm run build', { stdio: 'inherit' });
@@ -91,6 +187,8 @@ async function buildApp() {
         console.error('Vite build failed:', error.message);
         process.exit(1);
       }
+    } else {
+      console.log('Vite build found. Proceeding with Electron build...');
     }
 
     // Build the app using electron-builder
@@ -119,4 +217,5 @@ async function buildApp() {
 }
 
 // Run the build process
+console.log("Starting build-electron.cjs script");
 buildApp();

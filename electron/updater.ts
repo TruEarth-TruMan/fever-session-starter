@@ -1,5 +1,7 @@
 
 import { app, autoUpdater, dialog, BrowserWindow } from 'electron';
+import path from 'path';
+import fs from 'fs';
 
 export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
   // Skip in development mode or when running without packaging
@@ -17,7 +19,10 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
     const feedURL = `https://feverstudio.live/fever-update.json`;
     console.log(`Setting up auto-updater for ${platform} with feed URL: ${feedURL}`);
     
-    // Configure autoUpdater
+    // Check if feed URL is accessible
+    console.log(`Auto-updater feed URL: ${feedURL}`);
+    
+    // Configure autoUpdater with explicit feed URL
     autoUpdater.setFeedURL({ url: feedURL });
     
     // Check for updates every hour
@@ -53,19 +58,28 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
       });
     });
 
-    // Update available handler (optional)
+    // Update available handler
     autoUpdater.on('update-available', () => {
       console.log('Update available, downloading...');
+      
+      // Notify the user that an update is available
+      mainWindow.webContents.send('update-available');
     });
 
-    // Update not available handler (optional)
+    // Update not available handler
     autoUpdater.on('update-not-available', () => {
       console.log('No updates available');
     });
 
-    // Error handler
+    // Error handler with more detailed logging
     autoUpdater.on('error', (error) => {
       console.error('Auto-updater error:', error);
+      
+      // Log additional details about the error
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
       
       // Only show error dialog in production
       if (process.env.NODE_ENV === 'production') {
@@ -78,5 +92,11 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
 
   } catch (error) {
     console.error('Failed to setup auto-updater:', error);
+    
+    // Log additional details about the error
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
   }
 };

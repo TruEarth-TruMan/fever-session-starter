@@ -1,5 +1,7 @@
 
+#!/usr/bin/env node
 // Simple build script to help run the Electron build process
+
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -11,7 +13,7 @@ try {
   execSync('npm run build', { stdio: 'inherit' });
   
   console.log('\n2. Running Electron build...');
-  const buildElectronPath = path.resolve(__dirname, './build-electron.cjs');
+  const buildElectronPath = path.join(__dirname, 'build-electron.cjs');
   
   // Verify that the file exists before trying to execute it
   if (!fs.existsSync(buildElectronPath)) {
@@ -19,6 +21,8 @@ try {
   }
   
   console.log(`Executing build script: ${buildElectronPath}`);
+  
+  // Run using node with explicit path
   execSync(`node "${buildElectronPath}"`, { stdio: 'inherit' });
   
   console.log('\n✓ Build completed successfully!');
