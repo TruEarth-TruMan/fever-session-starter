@@ -35,11 +35,29 @@ async function main() {
         // If it doesn't exist, create it
         if (!fs.existsSync(electronBuilderPath)) {
           log('Creating electron-builder.js...', true);
-          fs.copyFileSync(
-            path.join(__dirname, 'electron-builder.js'), 
-            electronBuilderPath
-          );
-          log(`Created electron-builder.js: ${fs.existsSync(electronBuilderPath)}`, false);
+          
+          // Check if we have a template file to copy from
+          const templatePath = path.join(__dirname, 'electron-builder.js');
+          if (fs.existsSync(templatePath)) {
+            fs.copyFileSync(templatePath, electronBuilderPath);
+            log(`Created electron-builder.js by copying template: ${fs.existsSync(electronBuilderPath)}`, false);
+          } else {
+            // Create from scratch with minimal config
+            const minimalConfig = `/**
+ * Fever Application Packaging Configuration
+ */
+module.exports = {
+  appId: "com.fever.audioapp",
+  productName: "Fever",
+  directories: { output: "release", buildResources: "build" },
+  files: ["dist/**/*", "electron/**/*", "!node_modules/**/*"],
+  mac: { category: "public.app-category.music", target: ["dmg", "zip"] },
+  win: { target: ["nsis"] },
+  publish: [{ provider: "generic", url: "https://feverstudio.live/update" }]
+};`;
+            fs.writeFileSync(electronBuilderPath, minimalConfig);
+            log(`Created minimal electron-builder.js: ${fs.existsSync(electronBuilderPath)}`, false);
+          }
         }
       } catch (err) {
         log(`Error reading directory: ${err.message}`, true);

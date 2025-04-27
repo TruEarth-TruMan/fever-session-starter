@@ -15,6 +15,7 @@ function resolveProjectRoot(forceRootDir) {
   // Try common locations
   const possibleRootDirs = [
     process.cwd(),
+    path.dirname(path.dirname(__dirname)), // Go up two levels from scripts/utils
     path.dirname(__dirname),
     path.join(process.cwd(), '..'),
     path.resolve(process.cwd(), '..'),
@@ -55,12 +56,12 @@ function isValidProjectRoot(dir) {
       const hasPackageJson = fs.existsSync(path.join(dir, 'package.json'));
       const hasViteConfig = fs.existsSync(path.join(dir, 'vite.config.ts')) || 
                           fs.existsSync(path.join(dir, 'vite.config.js'));
-      const hasElectronBuilder = fs.existsSync(path.join(dir, 'electron-builder.js'));
       
       console.log(`Package.json exists: ${hasPackageJson}`);
       console.log(`Vite config exists: ${hasViteConfig}`);
-      console.log(`electron-builder.js exists: ${hasElectronBuilder}`);
       
+      // Return true as long as we have package.json and vite.config
+      // Don't require electron-builder.js since we'll create it if missing
       return hasPackageJson && hasViteConfig;
     }
     return false;
@@ -76,6 +77,7 @@ function isValidProjectRoot(dir) {
 function resolveFilePath(rootDir, filename) {
   if (!rootDir || !filename) return null;
   
+  // Try the direct path first
   const filePath = path.join(rootDir, filename);
   if (fs.existsSync(filePath)) {
     return filePath;
@@ -89,13 +91,18 @@ function resolveFilePath(rootDir, filename) {
     path.join(path.dirname(rootDir), filename)
   ];
   
+  // More detailed logging for debugging
+  console.log(`Direct path ${filePath} not found, trying alternatives...`);
+  
   for (const alt of alternatives) {
+    console.log(`Checking alternative path: ${alt}`);
     if (fs.existsSync(alt)) {
       console.log(`Found ${filename} at alternative location: ${alt}`);
       return alt;
     }
   }
   
+  console.log(`${filename} not found in any expected location`);
   return null;
 }
 

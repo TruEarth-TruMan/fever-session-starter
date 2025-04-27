@@ -16,11 +16,36 @@ function loadElectronConfig(rootDir) {
     console.log(`Falling back to current directory: ${rootDir}`);
   }
   
-  // Try to find the config file in various locations
-  let configPath = resolveFilePath(rootDir, 'electron-builder.js');
+  // Try to find the config file in various locations with more debugging info
+  const possiblePaths = [
+    path.join(rootDir, 'electron-builder.js'),
+    path.join(rootDir, 'config', 'electron-builder.js'),
+    path.join(rootDir, 'build', 'electron-builder.js'),
+    path.join(process.cwd(), 'electron-builder.js')
+  ];
+  
+  let configPath = null;
+  
+  // Check each possible path and use the first one found
+  for (const possPath of possiblePaths) {
+    console.log(`Checking for config at: ${possPath}`);
+    if (fs.existsSync(possPath)) {
+      configPath = possPath;
+      console.log(`Found config at: ${configPath}`);
+      break;
+    }
+  }
+  
+  // If not found through direct paths, try resolveFilePath
+  if (!configPath) {
+    configPath = resolveFilePath(rootDir, 'electron-builder.js');
+    if (configPath) {
+      console.log(`Found config through resolveFilePath at: ${configPath}`);
+    }
+  }
   
   if (!configPath) {
-    console.error(`Config not found at ${path.join(rootDir, 'electron-builder.js')}`);
+    console.error(`Config not found at any expected location`);
     console.error(`Current directory: ${process.cwd()}`);
     console.error(`Root directory: ${rootDir}`);
     
@@ -35,30 +60,82 @@ function loadElectronConfig(rootDir) {
     configPath = path.join(rootDir, 'electron-builder.js');
     console.log('Creating a minimal electron-builder config file...');
     const minimalConfig = `
+/**
+ * Fever Application Packaging Configuration
+ * 
+ * This configuration file works with electron-builder to package
+ * the application for distribution on macOS and Windows.
+ */
+
+// Export the configuration object for electron-builder
 module.exports = {
   appId: "com.fever.audioapp",
   productName: "Fever",
   copyright: "Copyright © 2025",
+  
+  // Icon configuration for all platforms
+  // These files should be placed in the build/icons directory
+  // Uses OS-specific formats: .icns for macOS, .ico for Windows
+  icon: "build/icons/icon",
+  
+  // Electron Builder configuration settings
   directories: {
-    output: "release",
-    buildResources: "build",
+    output: "release", // Where the packaged apps will be placed
+    buildResources: "build", // Where to find icons and other resources
   },
+  
+  // Files to include in the build
   files: [
-    "dist/**/*",
-    "electron/**/*",
-    "!node_modules/**/*",
+    "dist/**/*", // Built Vite app
+    "electron/**/*", // Electron main process files
+    "!node_modules/**/*", // Exclude node_modules
   ],
+  
+  // macOS specific configuration
   mac: {
     category: "public.app-category.music",
-    target: ["dmg", "zip"],
+    target: [
+      { target: "dmg", arch: ["x64", "arm64"] },
+      { target: "zip", arch: ["x64", "arm64"] }
+    ],
+    artifactName: "Fever-\${version}-\${arch}.\${ext}",
+    darkModeSupport: true,
+    hardenedRuntime: true,
+    gatekeeperAssess: false,
+    entitlements: "build/entitlements.mac.plist",
+    entitlementsInherit: "build/entitlements.mac.plist",
+    notarize: false, // Set to true when credentials are available
+    icon: "build/icons/icon.icns",
   },
+  
+  // Windows specific configuration
   win: {
-    target: ["nsis"],
+    target: [
+      { target: "nsis", arch: ["x64"] }
+    ],
+    artifactName: "Fever-\${version}-setup.\${ext}",
+    icon: "build/icons/icon.ico",
   },
+  
+  // NSIS installer configuration for Windows
+  nsis: {
+    oneClick: false,
+    allowToChangeInstallationDirectory: true,
+    createDesktopShortcut: true,
+    createStartMenuShortcut: true,
+    shortcutName: "Fever",
+    installerIcon: "build/icons/icon.ico",
+    uninstallerIcon: "build/icons/icon.ico",
+    installerHeaderIcon: "build/icons/icon.ico",
+    uninstallDisplayName: "Fever \${version}",
+  },
+  
+  // App update configuration
   publish: [
     {
       provider: "generic",
       url: "https://feverstudio.live/update",
+      channel: "latest",
     }
   ],
 };`;
