@@ -7,37 +7,30 @@ const fs = require('fs');
 // Get absolute path to the current directory
 const currentDir = process.cwd();
 console.log(`Current directory for build-electron.cjs: ${currentDir}`);
+console.log(`Script path: ${__filename}`);
 
-// Determine project root directory
-let rootDir = currentDir;
+// If FORCE_ROOT_DIR is set, use that as the root directory
+let rootDir = process.env.FORCE_ROOT_DIR || currentDir;
+console.log(`Using root directory from environment: ${rootDir}`);
 
-// Check if we're in the correct directory
-const isProjectRoot = (dir) => {
-  return fs.existsSync(path.join(dir, 'package.json')) && 
-         fs.existsSync(path.join(dir, 'electron-builder.js'));
-};
-
-// If current directory isn't the project root, try to find it
-if (!isProjectRoot(rootDir)) {
-  console.log('Not in the project root directory. Attempting to locate it...');
+// Hard-coded path fallback if needed
+if (!fs.existsSync(path.join(rootDir, 'package.json'))) {
+  console.log('No package.json found in provided rootDir, trying fallback paths...');
   
-  // Check parent directory
-  const possibleRoot = path.resolve(rootDir, '..');
-  if (isProjectRoot(possibleRoot)) {
-    rootDir = possibleRoot;
-    console.log(`Found project root at parent directory: ${rootDir}`);
-  } else {
-    // Look for fever-session-starter directory
-    const parentDir = path.dirname(rootDir);
-    const feverDir = path.join(parentDir, 'fever-session-starter');
-    
-    if (fs.existsSync(feverDir) && isProjectRoot(feverDir)) {
-      rootDir = feverDir;
-      console.log(`Found project root at fever-session-starter: ${rootDir}`);
-    } else {
-      console.error('ERROR: Could not locate the project root directory.');
-      console.error('Please run this script from the fever-session-starter directory.');
-      process.exit(1);
+  // Try some common paths
+  const possiblePaths = [
+    currentDir,
+    path.join(currentDir, '..'),
+    path.join(currentDir, '..', 'fever-session-starter'),
+    'C:\\Users\\robbi\\fever-session-starter'
+  ];
+  
+  for (const possiblePath of possiblePaths) {
+    console.log(`Checking path: ${possiblePath}`);
+    if (fs.existsSync(path.join(possiblePath, 'package.json'))) {
+      rootDir = possiblePath;
+      console.log(`Found package.json at: ${possiblePath}`);
+      break;
     }
   }
 }
@@ -49,135 +42,118 @@ console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
 process.chdir(rootDir);
 console.log(`Changed working directory to: ${process.cwd()}`);
 
-// Explicitly set up the paths to the script modules with proper path resolution
+// Create scripts directory if it doesn't exist
 const scriptsDir = path.join(rootDir, 'scripts');
-console.log(`Scripts directory: ${scriptsDir}`);
-
 if (!fs.existsSync(scriptsDir)) {
-  console.error(`ERROR: Scripts directory not found at: ${scriptsDir}`);
-  console.error('Creating scripts directory and necessary files...');
-  
-  // Create scripts directory if it doesn't exist
+  console.log(`Creating scripts directory: ${scriptsDir}`);
   fs.mkdirSync(scriptsDir, { recursive: true });
-  
-  // Create minimal required script files
-  const setupBuildDirsContent = `
-const fs = require('fs');
-const path = require('path');
-
-function setupBuildDirectories(rootDir) {
-  console.log(\`Setting up build directories in \${rootDir}\`);
-  
-  const buildDir = path.join(rootDir, 'build');
-  const iconsDir = path.join(buildDir, 'icons');
-
-  if (!fs.existsSync(buildDir)) {
-    console.log(\`Creating build directory: \${buildDir}\`);
-    fs.mkdirSync(buildDir, { recursive: true });
-  }
-
-  if (!fs.existsSync(iconsDir)) {
-    console.log(\`Creating icons directory: \${iconsDir}\`);
-    fs.mkdirSync(iconsDir, { recursive: true });
-  }
-
-  return { buildDir, iconsDir };
 }
 
-module.exports = { setupBuildDirectories };
-  `;
-  fs.writeFileSync(path.join(scriptsDir, 'setupBuildDirs.js'), setupBuildDirsContent);
-  
-  // Continue creating other required files...
-  // [Additional file creation would go here]
-}
+// Ensure all required script files are in place
+console.log("Checking for required script files");
 
-// Try to import the modules, with better error handling
-try {
-  // First check if the files exist
-  const requiredScripts = [
-    'setupBuildDirs.js',
-    'generateEntitlements.js',
-    'generateUpdateExample.js',
-    'ensureDirectories.js',
-    'checkViteBuild.js',
-    'loadElectronConfig.js'
-  ];
-  
-  const missingScripts = requiredScripts.filter(script => !fs.existsSync(path.join(scriptsDir, script)));
-  
-  if (missingScripts.length > 0) {
-    console.error(`ERROR: Missing required script files: ${missingScripts.join(', ')}`);
-    console.error(`Please ensure these files exist in the scripts directory: ${scriptsDir}`);
-    process.exit(1);
-  }
-  
-  // Import the modules
-  const { setupBuildDirectories } = require(path.join(scriptsDir, 'setupBuildDirs'));
-  const { generateMacOSEntitlements } = require(path.join(scriptsDir, 'generateEntitlements'));
-  const { generateUpdateExample } = require(path.join(scriptsDir, 'generateUpdateExample'));
-  const { ensureDirectories } = require(path.join(scriptsDir, 'ensureDirectories'));
-  const { checkViteBuild } = require(path.join(scriptsDir, 'checkViteBuild'));
-  const { loadElectronConfig } = require(path.join(scriptsDir, 'loadElectronConfig'));
+// First verify the check functions actually exist
+const checkViteBuildPath = path.join(scriptsDir, 'checkViteBuild.js');
+const loadElectronConfigPath = path.join(scriptsDir, 'loadElectronConfig.js');
 
-  // Main build process
-  async function buildApp() {
-    try {
-      // Set up build environment
-      console.log('Setting up build environment...');
-      
-      // Setup build directories using utility function
-      const { buildDir } = setupBuildDirectories(rootDir);
-      console.log(`Build directory created: ${buildDir}`);
-
-      // Generate required files using utility functions
-      console.log('Generating entitlements and update manifest...');
-      generateMacOSEntitlements(buildDir);
-      generateUpdateExample(rootDir);
-      
-      // Ensure download directories exist
-      ensureDirectories(rootDir);
-
-      // Check Vite build using utility function
-      checkViteBuild(rootDir);
-
-      // Load electron-builder config using utility function
-      const config = loadElectronConfig(rootDir);
-      console.log('Electron builder config loaded successfully');
-
-      // Build the app using electron-builder
-      console.log('Starting Electron build process...');
-      const results = await builder.build({
-        config,
-        publish: process.env.PUBLISH === 'always' ? 'always' : 'never'
-      });
-
-      console.log('Build successful!');
-      console.log('Built artifacts:');
-      results.forEach(result => {
-        console.log(` - ${result.file} (${(result.size / 1024 / 1024).toFixed(2)} MB)`);
-      });
-
-      console.log('You can find the installers in the "release" directory.');
-      
-      process.exit(0);
-    } catch (error) {
-      console.error('Build failed:', error);
-      process.exit(1);
-    }
-  }
-
-  // Run the build process
-  console.log("Starting build-electron.cjs script");
-  buildApp();
-} catch (error) {
-  console.error(`Failed to import required modules: ${error.message}`);
-  console.error(`Current directory: ${process.cwd()}`);
-  console.error(`Scripts directory path: ${scriptsDir}`);
-  
-  if (fs.existsSync(scriptsDir)) {
-    console.error(`Contents of scripts directory: ${fs.readdirSync(scriptsDir).join(', ')}`);
-  }
-  
+if (!fs.existsSync(checkViteBuildPath)) {
+  console.error(`ERROR: Required script file not found: ${checkViteBuildPath}`);
   process.exit(1);
 }
+
+if (!fs.existsSync(loadElectronConfigPath)) {
+  console.error(`ERROR: Required script file not found: ${loadElectronConfigPath}`);
+  process.exit(1);
+}
+
+// Explicitly require them by absolute path
+const { checkViteBuild } = require(checkViteBuildPath);
+const { loadElectronConfig } = require(loadElectronConfigPath);
+
+// Try to require the other modules - set fallback empty functions if not found
+let setupBuildDirectories = () => ({ buildDir: path.join(rootDir, 'build') });
+let generateMacOSEntitlements = () => {};
+let generateUpdateExample = () => {};
+let ensureDirectories = () => {};
+
+try {
+  const { setupBuildDirectories: setup } = require(path.join(scriptsDir, 'setupBuildDirs'));
+  setupBuildDirectories = setup;
+} catch (error) {
+  console.warn(`Warning: Could not load setupBuildDirs.js: ${error.message}`);
+}
+
+try {
+  const { generateMacOSEntitlements: genMac } = require(path.join(scriptsDir, 'generateEntitlements'));
+  generateMacOSEntitlements = genMac;
+} catch (error) {
+  console.warn(`Warning: Could not load generateEntitlements.js: ${error.message}`);
+}
+
+try {
+  const { generateUpdateExample: genUpdate } = require(path.join(scriptsDir, 'generateUpdateExample'));
+  generateUpdateExample = genUpdate;
+} catch (error) {
+  console.warn(`Warning: Could not load generateUpdateExample.js: ${error.message}`);
+}
+
+try {
+  const { ensureDirectories: ensureDirs } = require(path.join(scriptsDir, 'ensureDirectories'));
+  ensureDirectories = ensureDirs;
+} catch (error) {
+  console.warn(`Warning: Could not load ensureDirectories.js: ${error.message}`);
+}
+
+// Main build process
+async function buildApp() {
+  try {
+    // Set up build environment
+    console.log('Setting up build environment...');
+    
+    // Setup build directories using utility function
+    const { buildDir } = setupBuildDirectories(rootDir);
+    console.log(`Build directory created: ${buildDir}`);
+
+    // Generate required files using utility functions
+    console.log('Generating entitlements and update manifest...');
+    generateMacOSEntitlements(buildDir);
+    generateUpdateExample(rootDir);
+    
+    // Ensure download directories exist
+    ensureDirectories(rootDir);
+
+    // Check Vite build using utility function - this is critical
+    console.log('Checking Vite build...');
+    checkViteBuild(rootDir);
+
+    // Load electron-builder config using utility function - this is critical
+    console.log('Loading electron-builder config...');
+    const config = loadElectronConfig(rootDir);
+    console.log('Electron builder config loaded successfully');
+    console.log('Config:', JSON.stringify(config, null, 2));
+
+    // Build the app using electron-builder
+    console.log('Starting Electron build process...');
+    const results = await builder.build({
+      config,
+      publish: process.env.PUBLISH === 'always' ? 'always' : 'never'
+    });
+
+    console.log('Build successful!');
+    console.log('Built artifacts:');
+    results.forEach(result => {
+      console.log(` - ${result.file} (${(result.size / 1024 / 1024).toFixed(2)} MB)`);
+    });
+
+    console.log('You can find the installers in the "release" directory.');
+    
+    process.exit(0);
+  } catch (error) {
+    console.error('Build failed:', error);
+    process.exit(1);
+  }
+}
+
+// Run the build process
+console.log("Starting build-electron.cjs script");
+buildApp();

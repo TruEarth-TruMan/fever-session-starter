@@ -7,60 +7,52 @@ const path = require('path');
 const fs = require('fs');
 
 console.log('Starting Fever build process...');
+console.log(`Current Node.js version: ${process.version}`);
+console.log(`Current working directory: ${process.cwd()}`);
+console.log(`Script path: ${__filename}`);
+console.log(`Directory name: ${__dirname}`);
 
 // Get absolute path to the project directory
 const currentDir = process.cwd();
-console.log(`Current working directory: ${currentDir}`);
-
-// Try to determine the root directory
-let rootDir = currentDir;
-
-// Check if we're in the correct directory by looking for key project files
-const isProjectRoot = (dir) => {
-  return fs.existsSync(path.join(dir, 'package.json')) && 
-         fs.existsSync(path.join(dir, 'electron-builder.js'));
-};
-
-// If current directory isn't the project root, try to find it
-if (!isProjectRoot(rootDir)) {
-  console.log('Not in the project root directory. Attempting to locate it...');
-  
-  // Check if we're in a subdirectory of the project
-  const possibleRoot = path.resolve(rootDir, '..');
-  if (isProjectRoot(possibleRoot)) {
-    rootDir = possibleRoot;
-    console.log(`Found project root at parent directory: ${rootDir}`);
-  } else {
-    // Check if fever-session-starter exists in parent or sibling directories
-    const parentDir = path.dirname(rootDir);
-    const feverDir = path.join(parentDir, 'fever-session-starter');
-    
-    if (fs.existsSync(feverDir) && isProjectRoot(feverDir)) {
-      rootDir = feverDir;
-      console.log(`Found project root at fever-session-starter: ${rootDir}`);
-    } else {
-      console.error('ERROR: Could not locate the project root directory.');
-      console.error('Please run this script from the fever-session-starter directory.');
-      console.error(`Current directory: ${currentDir}`);
-      console.error(`Files in current directory: ${fs.readdirSync(currentDir).join(', ')}`);
-      process.exit(1);
-    }
-  }
-}
+const rootDir = currentDir;
 
 console.log(`Using project root directory: ${rootDir}`);
 console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
 
-// Change to the root directory
-process.chdir(rootDir);
-console.log(`Changed working directory to: ${process.cwd()}`);
+// Create scripts directory if it doesn't exist
+const scriptsDir = path.join(rootDir, 'scripts');
+if (!fs.existsSync(scriptsDir)) {
+  console.log(`Creating scripts directory: ${scriptsDir}`);
+  fs.mkdirSync(scriptsDir, { recursive: true });
+}
+
+// List of script files we need
+const requiredScriptFiles = {
+  'checkViteBuild.js': path.join(scriptsDir, 'checkViteBuild.js'),
+  'loadElectronConfig.js': path.join(scriptsDir, 'loadElectronConfig.js'),
+  'setupBuildDirs.js': path.join(scriptsDir, 'setupBuildDirs.js'),
+  'generateEntitlements.js': path.join(scriptsDir, 'generateEntitlements.js'),
+  'generateUpdateExample.js': path.join(scriptsDir, 'generateUpdateExample.js'),
+  'ensureDirectories.js': path.join(scriptsDir, 'ensureDirectories.js')
+};
+
+// Check that all required script files exist
+const missingFiles = Object.entries(requiredScriptFiles)
+  .filter(([_, filePath]) => !fs.existsSync(filePath))
+  .map(([fileName, _]) => fileName);
+
+if (missingFiles.length > 0) {
+  console.error(`ERROR: Missing required script files: ${missingFiles.join(', ')}`);
+  console.error('Cannot proceed with build process.');
+  process.exit(1);
+}
 
 // Verify we have the necessary files
 const requiredFiles = ['package.json', 'electron-builder.js', 'vite.config.ts'];
-const missingFiles = requiredFiles.filter(file => !fs.existsSync(path.join(rootDir, file)));
+const missingProjectFiles = requiredFiles.filter(file => !fs.existsSync(path.join(rootDir, file)));
 
-if (missingFiles.length > 0) {
-  console.error(`ERROR: Missing required files: ${missingFiles.join(', ')}`);
+if (missingProjectFiles.length > 0) {
+  console.error(`ERROR: Missing required files: ${missingProjectFiles.join(', ')}`);
   console.error('Cannot proceed with build process.');
   process.exit(1);
 }
@@ -80,7 +72,7 @@ try {
   console.log(`Executing build script: ${buildElectronPath}`);
   
   // Run using node with the full absolute path 
-  execSync(`node "${buildElectronPath}"`, { stdio: 'inherit' });
+  execSync(`node "${buildElectronPath}"`, { stdio: 'inherit', env: { ...process.env, FORCE_ROOT_DIR: rootDir } });
   
   console.log('\n✓ Build completed successfully!');
   console.log('\nInstallers are located in the "release" directory.');
