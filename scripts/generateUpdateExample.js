@@ -6,7 +6,7 @@ function generateUpdateExample(rootDir) {
   // Get package.json version or use default
   let currentVersion = '1.0.1';
   try {
-    const packageJson = require(path.join(rootDir, 'package.json'));
+    const packageJson = JSON.parse(fs.readFileSync(path.join(rootDir, 'package.json'), 'utf-8'));
     currentVersion = packageJson.version || currentVersion;
   } catch (error) {
     console.warn('Could not read version from package.json, using default:', currentVersion);

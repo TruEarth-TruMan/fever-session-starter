@@ -3,6 +3,8 @@ const builder = require('electron-builder');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
+
+// Import the required modules - ensure these paths are correct
 const { setupBuildDirectories } = require('./scripts/setupBuildDirs');
 const { generateMacOSEntitlements } = require('./scripts/generateEntitlements');
 const { generateUpdateExample } = require('./scripts/generateUpdateExample');

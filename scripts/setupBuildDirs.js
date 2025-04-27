@@ -18,4 +18,3 @@ function setupBuildDirectories(rootDir) {
 }
 
 module.exports = { setupBuildDirectories };
-

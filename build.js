@@ -11,7 +11,7 @@ try {
   execSync('npm run build', { stdio: 'inherit' });
   
   console.log('\n2. Running Electron build...');
-  const buildElectronPath = path.join(__dirname, 'build-electron.cjs');
+  const buildElectronPath = path.resolve(__dirname, 'build-electron.cjs');
   
   // Verify that the file exists before trying to execute it
   if (!fs.existsSync(buildElectronPath)) {
