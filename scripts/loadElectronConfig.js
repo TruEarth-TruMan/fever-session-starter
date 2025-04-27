@@ -13,6 +13,8 @@ function loadElectronConfig(rootDir) {
   
   if (!fs.existsSync(configPath)) {
     console.error(`Config not found: ${configPath}`);
+    console.error(`Current directory: ${process.cwd()}`);
+    console.error(`Files in directory: ${fs.readdirSync(rootDir).join(', ')}`);
     process.exit(1);
   }
   

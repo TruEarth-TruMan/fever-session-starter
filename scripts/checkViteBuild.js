@@ -14,9 +14,11 @@ function checkViteBuild(rootDir) {
   if (!fs.existsSync(distPath)) {
     console.log('Vite build not found. Running build process...');
     try {
+      console.log(`Executing npm run build in directory: ${rootDir}`);
       execSync('npm run build', { stdio: 'inherit', cwd: rootDir });
     } catch (error) {
       console.error('Vite build failed:', error.message);
+      console.error('Full error details:', error);
       process.exit(1);
     }
   } else {

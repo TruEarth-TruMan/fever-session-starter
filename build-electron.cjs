@@ -3,20 +3,26 @@
 const builder = require('electron-builder');
 const path = require('path');
 
-// Import utility functions from scripts
-const { setupBuildDirectories } = require('./scripts/setupBuildDirs');
-const { generateMacOSEntitlements } = require('./scripts/generateEntitlements');
-const { generateUpdateExample } = require('./scripts/generateUpdateExample');
-const { ensureDirectories } = require('./scripts/ensureDirectories');
-const { checkViteBuild } = require('./scripts/checkViteBuild');
-const { loadElectronConfig } = require('./scripts/loadElectronConfig');
+// Get absolute path to the project root directory
+const rootDir = path.resolve(__dirname);
+console.log(`Root directory: ${rootDir}`);
+
+// Explicitly set up the paths to the script modules with proper path resolution
+const scriptsDir = path.join(rootDir, 'scripts');
+
+// Import utility functions from scripts with explicit path resolution
+const { setupBuildDirectories } = require(path.join(scriptsDir, 'setupBuildDirs'));
+const { generateMacOSEntitlements } = require(path.join(scriptsDir, 'generateEntitlements'));
+const { generateUpdateExample } = require(path.join(scriptsDir, 'generateUpdateExample'));
+const { ensureDirectories } = require(path.join(scriptsDir, 'ensureDirectories'));
+const { checkViteBuild } = require(path.join(scriptsDir, 'checkViteBuild'));
+const { loadElectronConfig } = require(path.join(scriptsDir, 'loadElectronConfig'));
 
 // Main build process
 async function buildApp() {
   try {
     // Set up build environment
     console.log('Setting up build environment...');
-    const rootDir = __dirname;
     console.log(`Root directory for build-electron.cjs: ${rootDir}`);
     
     // Setup build directories using utility function

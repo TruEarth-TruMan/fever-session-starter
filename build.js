@@ -9,7 +9,7 @@ const fs = require('fs');
 console.log('Starting Fever build process...');
 
 // Make sure we're operating from the correct directory
-const rootDir = __dirname;
+const rootDir = path.resolve(__dirname);
 process.chdir(rootDir);
 
 console.log(`Current working directory: ${process.cwd()}`);
