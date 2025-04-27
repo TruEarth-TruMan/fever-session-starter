@@ -8,12 +8,18 @@ const fs = require('fs');
 
 console.log('Starting Fever build process...');
 
+// Make sure we're operating from the correct directory
+const rootDir = __dirname;
+process.chdir(rootDir);
+
+console.log(`Current working directory: ${process.cwd()}`);
+
 try {
   console.log('\n1. Running Vite build...');
   execSync('npm run build', { stdio: 'inherit' });
   
   console.log('\n2. Running Electron build...');
-  const buildElectronPath = path.join(__dirname, 'build-electron.cjs');
+  const buildElectronPath = path.join(rootDir, 'build-electron.cjs');
   
   // Verify that the file exists before trying to execute it
   if (!fs.existsSync(buildElectronPath)) {
@@ -22,7 +28,7 @@ try {
   
   console.log(`Executing build script: ${buildElectronPath}`);
   
-  // Run using node with explicit path
+  // Run using node with the full absolute path 
   execSync(`node "${buildElectronPath}"`, { stdio: 'inherit' });
   
   console.log('\n✓ Build completed successfully!');
@@ -32,5 +38,6 @@ try {
   console.log(' - macOS:   release/*.dmg to public/download/mac/');
 } catch (error) {
   console.error('\n✗ Build failed:', error.message);
+  console.error('\nFull error details:', error);
   process.exit(1);
 }

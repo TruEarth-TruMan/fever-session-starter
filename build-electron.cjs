@@ -7,9 +7,12 @@ const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
 
-// Inline the required functions to avoid module resolution issues
+// Ensure we're working in the right directory
+const rootDir = __dirname;
+console.log(`Root directory for build-electron.cjs: ${rootDir}`);
+
 // Setup build directories
-function setupBuildDirectories(rootDir) {
+function setupBuildDirectories() {
   console.log(`Setting up build directories in ${rootDir}`);
   
   const buildDir = path.join(rootDir, 'build');
@@ -53,10 +56,12 @@ function generateMacOSEntitlements(buildDir) {
   console.log(`Writing entitlements file to: ${entitlementsPath}`);
   fs.writeFileSync(entitlementsPath, entitlementsContent);
   console.log(`Generated entitlements file at ${entitlementsPath}`);
+  
+  return entitlementsPath;
 }
 
 // Generate update example
-function generateUpdateExample(rootDir) {
+function generateUpdateExample() {
   console.log(`Generating update example in ${rootDir}`);
   
   // Get package.json version or use default
@@ -129,21 +134,15 @@ function generateUpdateExample(rootDir) {
   } catch (error) {
     console.warn(`Could not copy update manifest to public directory: ${error.message}`);
   }
+  
+  return updateJsonPath;
 }
-
-// Config file
-const configPath = path.join(__dirname, 'electron-builder.js');
-if (!fs.existsSync(configPath)) {
-  console.error(`Config not found: ${configPath}`);
-  process.exit(1);
-}
-const config = require(configPath);
 
 // Create output directories if they don't exist
 const ensureDirectoriesExist = () => {
   const publicDownloadDirs = [
-    path.join(__dirname, 'public', 'download', 'win'),
-    path.join(__dirname, 'public', 'download', 'mac')
+    path.join(rootDir, 'public', 'download', 'win'),
+    path.join(rootDir, 'public', 'download', 'mac')
   ];
   
   publicDownloadDirs.forEach(dir => {
@@ -161,28 +160,26 @@ async function buildApp() {
     console.log('Setting up build environment...');
     console.log(`Current directory: ${__dirname}`);
     
-    const rootDir = __dirname;
-    console.log(`Root directory: ${rootDir}`);
-    
-    const { buildDir } = setupBuildDirectories(rootDir);
+    // Setup build directories
+    const { buildDir } = setupBuildDirectories();
     console.log(`Build directory created: ${buildDir}`);
 
     // Generate required files
     console.log('Generating entitlements and update manifest...');
     generateMacOSEntitlements(buildDir);
-    generateUpdateExample(rootDir);
+    generateUpdateExample();
     
     // Ensure download directories exist
     ensureDirectoriesExist();
 
     // Check if Vite build exists, if not, run it
-    const distPath = path.join(__dirname, 'dist', 'index.html');
+    const distPath = path.join(rootDir, 'dist', 'index.html');
     console.log(`Checking for Vite build at: ${distPath}`);
     
     if (!fs.existsSync(distPath)) {
       console.log('Vite build not found. Running build process...');
       try {
-        execSync('npm run build', { stdio: 'inherit' });
+        execSync('npm run build', { stdio: 'inherit', cwd: rootDir });
       } catch (error) {
         console.error('Vite build failed:', error.message);
         process.exit(1);
@@ -190,6 +187,18 @@ async function buildApp() {
     } else {
       console.log('Vite build found. Proceeding with Electron build...');
     }
+
+    // Config file - load it directly from the filesystem
+    const configPath = path.join(rootDir, 'electron-builder.js');
+    console.log(`Loading config from: ${configPath}`);
+    
+    if (!fs.existsSync(configPath)) {
+      console.error(`Config not found: ${configPath}`);
+      process.exit(1);
+    }
+    
+    // Explicitly require the config file using the full path
+    const config = require(configPath);
 
     // Build the app using electron-builder
     console.log('Starting Electron build process...');
