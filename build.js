@@ -1,4 +1,3 @@
-
 #!/usr/bin/env node
 // Simple build script to help run the Electron build process
 
@@ -8,11 +7,13 @@ const fs = require('fs');
 
 console.log('Starting Fever build process...');
 
-// Make sure we're operating from the correct directory
+// Get absolute path to the project root directory
 const rootDir = path.resolve(__dirname);
 process.chdir(rootDir);
 
 console.log(`Current working directory: ${process.cwd()}`);
+console.log(`Absolute root directory path: ${rootDir}`);
+console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
 
 try {
   console.log('\n1. Running Vite build...');

@@ -1,11 +1,12 @@
-
 #!/usr/bin/env node
 const builder = require('electron-builder');
 const path = require('path');
+const fs = require('fs');
 
 // Get absolute path to the project root directory
 const rootDir = path.resolve(__dirname);
 console.log(`Root directory: ${rootDir}`);
+console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
 
 // Explicitly set up the paths to the script modules with proper path resolution
 const scriptsDir = path.join(rootDir, 'scripts');
