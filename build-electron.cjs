@@ -4,6 +4,14 @@ const builder = require('electron-builder');
 const path = require('path');
 const fs = require('fs');
 
+// Import utility functions
+const { checkViteBuild } = require('./scripts/checkViteBuild');
+const { loadElectronConfig } = require('./scripts/loadElectronConfig');
+const { setupBuildDirectories } = require('./scripts/setupBuildDirs');
+const { generateMacOSEntitlements } = require('./scripts/generateEntitlements');
+const { generateUpdateExample } = require('./scripts/generateUpdateExample');
+const { ensureDirectories } = require('./scripts/ensureDirectories');
+
 // Get absolute path to the current directory
 const currentDir = process.cwd();
 console.log(`Current directory for build-electron.cjs: ${currentDir}`);
@@ -52,91 +60,6 @@ if (!fs.existsSync(scriptsDir)) {
   console.log(`Creating scripts directory: ${scriptsDir}`);
   fs.mkdirSync(scriptsDir, { recursive: true });
 }
-
-// Check if the required script files exist
-console.log("Checking for required script files");
-
-// Function to ensure a module is loaded properly
-function safeRequire(modulePath, defaultFunction) {
-  try {
-    if (fs.existsSync(modulePath)) {
-      console.log(`Loading module: ${modulePath}`);
-      return require(modulePath);
-    } else {
-      console.warn(`Module not found: ${modulePath}`);
-      return { [defaultFunction.name]: defaultFunction };
-    }
-  } catch (error) {
-    console.error(`Error loading module ${modulePath}: ${error.message}`);
-    return { [defaultFunction.name]: defaultFunction };
-  }
-}
-
-// Safely load the required modules
-const checkViteBuildPath = path.join(scriptsDir, 'checkViteBuild.js');
-const loadElectronConfigPath = path.join(scriptsDir, 'loadElectronConfig.js');
-const setupBuildDirsPath = path.join(scriptsDir, 'setupBuildDirs.js');
-const generateEntitlementsPath = path.join(scriptsDir, 'generateEntitlements.js');
-const generateUpdateExamplePath = path.join(scriptsDir, 'generateUpdateExample.js');
-const ensureDirectoriesPath = path.join(scriptsDir, 'ensureDirectories.js');
-
-// Default implementations as fallbacks
-function defaultCheckViteBuild(rootDir) {
-  console.log(`Default checkViteBuild implementation for ${rootDir}`);
-  const distPath = path.join(rootDir, 'dist', 'index.html');
-  if (!fs.existsSync(distPath)) {
-    throw new Error('Vite build not found. Please run npm run build first.');
-  }
-  return true;
-}
-
-function defaultLoadElectronConfig(rootDir) {
-  console.log(`Default loadElectronConfig implementation for ${rootDir}`);
-  const configPath = path.join(rootDir, 'electron-builder.js');
-  if (!fs.existsSync(configPath)) {
-    throw new Error(`electron-builder.js not found at ${configPath}`);
-  }
-  return require(configPath);
-}
-
-function defaultSetupBuildDirectories(rootDir) {
-  console.log(`Default setupBuildDirectories implementation for ${rootDir}`);
-  const buildDir = path.join(rootDir, 'build');
-  const iconDir = path.join(buildDir, 'icons');
-  [buildDir, iconDir].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
-  return { buildDir, iconDir };
-}
-
-function defaultGenerateMacOSEntitlements(buildDir) {
-  console.log(`Default generateMacOSEntitlements implementation for ${buildDir}`);
-}
-
-function defaultGenerateUpdateExample(rootDir) {
-  console.log(`Default generateUpdateExample implementation for ${rootDir}`);
-}
-
-function defaultEnsureDirectories(rootDir) {
-  console.log(`Default ensureDirectories implementation for ${rootDir}`);
-  const publicDir = path.join(rootDir, 'public');
-  const downloadDir = path.join(publicDir, 'download');
-  [publicDir, downloadDir].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  });
-}
-
-// Load modules with fallbacks
-const { checkViteBuild } = safeRequire(checkViteBuildPath, defaultCheckViteBuild);
-const { loadElectronConfig } = safeRequire(loadElectronConfigPath, defaultLoadElectronConfig);
-const { setupBuildDirectories } = safeRequire(setupBuildDirsPath, defaultSetupBuildDirectories);
-const { generateMacOSEntitlements } = safeRequire(generateEntitlementsPath, defaultGenerateMacOSEntitlements);
-const { generateUpdateExample } = safeRequire(generateUpdateExamplePath, defaultGenerateUpdateExample);
-const { ensureDirectories } = safeRequire(ensureDirectoriesPath, defaultEnsureDirectories);
 
 // Main build process
 async function buildApp() {
