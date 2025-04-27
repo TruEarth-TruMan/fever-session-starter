@@ -1,10 +1,22 @@
 
 #!/usr/bin/env node
-// Simple build script to help run the Electron build process
+// Enhanced build script with better diagnostics and command-line arguments
 
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+
+// Add support for command-line arguments
+const args = process.argv.slice(2);
+let forceRootDir = null;
+
+// Parse command-line arguments
+args.forEach(arg => {
+  if (arg.startsWith('--root=')) {
+    forceRootDir = arg.substring(7).replace(/^"(.*)"$/, '$1');
+    console.log(`Using root directory from command line: ${forceRootDir}`);
+  }
+});
 
 // Utility function for consistent logging
 function log(message, isError = false) {
@@ -19,17 +31,25 @@ log(`Current working directory: ${process.cwd()}`);
 log(`Script path: ${__filename}`);
 
 // Get absolute path to the project directory - try multiple approaches
-let rootDir = null;
+let rootDir = forceRootDir;
 const possibleRootDirs = [
+  forceRootDir,
   process.cwd(),
   path.dirname(__dirname),
-  'C:\\Users\\robbi\\fever-session-starter'
-];
+  'C:\\Users\\robbi\\fever-session-starter',
+  'C:\\Users\\robbi\\Desktop\\fever-session-starter'
+].filter(Boolean);
 
 // Validation function
 function isValidProjectRoot(dir) {
-  return fs.existsSync(path.join(dir, 'package.json')) && 
-         fs.existsSync(path.join(dir, 'vite.config.ts'));
+  if (!dir) return false;
+  try {
+    return fs.existsSync(path.join(dir, 'package.json')) && 
+           fs.existsSync(path.join(dir, 'vite.config.ts'));
+  } catch (error) {
+    log(`Error checking directory ${dir}: ${error.message}`, true);
+    return false;
+  }
 }
 
 // Try each possible root directory
@@ -46,21 +66,30 @@ for (const dir of possibleRootDirs) {
 }
 
 if (!rootDir) {
-  log('Could not determine project root directory. Please run this script from the project root.', true);
+  log('Could not determine project root directory. Please run this script from the project root or use --root=PATH', true);
   log('Run the check-environment.js script to diagnose your environment.', true);
   process.exit(1);
 }
 
 log(`Using project root directory: ${rootDir}`);
-process.chdir(rootDir);
-log(`Working directory set to: ${process.cwd()}`);
-log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+try {
+  process.chdir(rootDir);
+  log(`Working directory set to: ${process.cwd()}`);
+  log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+} catch (err) {
+  log(`Failed to change to root directory: ${err.message}`, true);
+  process.exit(1);
+}
 
 // Create scripts directory if it doesn't exist
 const scriptsDir = path.join(rootDir, 'scripts');
 if (!fs.existsSync(scriptsDir)) {
   log(`Creating scripts directory: ${scriptsDir}`);
-  fs.mkdirSync(scriptsDir, { recursive: true });
+  try {
+    fs.mkdirSync(scriptsDir, { recursive: true });
+  } catch (err) {
+    log(`Error creating scripts directory: ${err.message}`, true);
+  }
 }
 
 // Check for required scripts
@@ -78,7 +107,31 @@ const missingScripts = requiredScripts.filter(script => !fs.existsSync(path.join
 if (missingScripts.length > 0) {
   log(`Missing required script files: ${missingScripts.join(', ')}`, true);
   log('Please ensure all required script files are present in the scripts directory.', true);
-  process.exit(1);
+  
+  // Try to fix common issues by checking if the files exist but with wrong case
+  const allFiles = fs.readdirSync(scriptsDir);
+  missingScripts.forEach(missing => {
+    const lowerMissing = missing.toLowerCase();
+    const match = allFiles.find(file => file.toLowerCase() === lowerMissing);
+    if (match && match !== missing) {
+      log(`Found case mismatch: ${match} (actual) vs ${missing} (expected)`, true);
+      log(`Attempting to rename file for consistency...`);
+      try {
+        fs.renameSync(path.join(scriptsDir, match), path.join(scriptsDir, missing));
+        log(`Renamed ${match} to ${missing} successfully`);
+      } catch (err) {
+        log(`Failed to rename file: ${err.message}`, true);
+      }
+    }
+  });
+  
+  // After trying to fix, check again
+  const stillMissing = requiredScripts.filter(script => !fs.existsSync(path.join(scriptsDir, script)));
+  if (stillMissing.length > 0) {
+    process.exit(1);
+  } else {
+    log('Fixed missing script files by renaming them properly.');
+  }
 }
 
 // Verify we have the necessary files
@@ -92,10 +145,29 @@ if (missingFiles.length > 0) {
 }
 
 try {
-  log('\n1. Running Vite build...');
-  execSync('npm run build', { stdio: 'inherit', cwd: rootDir });
+  log('\n------------------------------------------');
+  log('1. Running Vite build...');
+  log('------------------------------------------');
   
-  log('\n2. Running Electron build...');
+  try {
+    execSync('npm run build', { stdio: 'inherit', cwd: rootDir });
+  } catch (error) {
+    log(`Vite build failed: ${error.message}`, true);
+    
+    // Try more direct approach
+    log('Attempting direct Vite build...');
+    try {
+      execSync('node_modules/.bin/vite build', { stdio: 'inherit', cwd: rootDir });
+    } catch (viteError) {
+      log(`Direct Vite build also failed: ${viteError.message}`, true);
+      process.exit(1);
+    }
+  }
+  
+  log('\n------------------------------------------');
+  log('2. Running Electron build...');
+  log('------------------------------------------');
+  
   const buildElectronPath = path.join(rootDir, 'build-electron.cjs');
   
   // Verify that the file exists before trying to execute it
