@@ -1,5 +1,4 @@
 
-#!/usr/bin/env node
 const { log } = require('./scripts/utils/logger');
 const { resolveProjectRoot } = require('./scripts/utils/pathResolver');
 const { validateBuildConfig } = require('./scripts/utils/buildValidator');

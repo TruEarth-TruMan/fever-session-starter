@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const path = require('path');
 const { resolveFilePath } = require('./utils/pathResolver');
@@ -16,7 +15,7 @@ function loadElectronConfig(rootDir) {
     console.log(`Falling back to current directory: ${rootDir}`);
   }
   
-  // Try multiple file extensions and names
+  // Update possible config file names to prioritize .cjs
   const possibleConfigFiles = [
     'electron-builder.cjs',
     'electron-builder.js',
@@ -49,17 +48,12 @@ function loadElectronConfig(rootDir) {
   if (!configPath) {
     console.error('No electron-builder configuration file found.');
     
-    // Create a default configuration file - using .cjs extension for clarity
+    // Create a default configuration file - using .cjs extension
     configPath = path.join(rootDir, 'electron-builder.cjs');
     const defaultConfig = `
 /**
  * Fever Application Packaging Configuration
- * 
- * This configuration file works with electron-builder to package
- * the application for distribution on macOS and Windows.
  */
-
-// Export the configuration object for electron-builder
 module.exports = {
   appId: "com.fever.audioapp",
   productName: "Fever",

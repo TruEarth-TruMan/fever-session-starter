@@ -5,9 +5,9 @@ const { checkBasicConfig } = require('./checks/config/basicConfigChecks');
 const { checkModuleFormat } = require('./checks/config/moduleFormatCheck');
 
 function validateElectronBuilderConfig(rootDir) {
-  console.log(`\n5. Checking electron-builder.js configuration`);
+  console.log(`\n5. Checking electron-builder.cjs configuration`);
   try {
-    const configPath = path.join(rootDir, 'electron-builder.js');
+    const configPath = path.join(rootDir, 'electron-builder.cjs');
     const configContent = fs.readFileSync(configPath, 'utf-8');
     
     // Check basic configuration requirements
@@ -18,7 +18,7 @@ function validateElectronBuilderConfig(rootDir) {
     
     return Object.values(checks).every(Boolean) && hasValidModuleFormat;
   } catch (err) {
-    console.log(`❌ Error analyzing electron-builder.js: ${err.message}`);
+    console.log(`❌ Error analyzing electron-builder.cjs: ${err.message}`);
     return false;
   }
 }
