@@ -4,24 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-// Ensure scripts can be found by requiring with absolute paths
-const scriptsDir = path.join(__dirname, 'scripts');
-const diagnosticsDir = path.join(scriptsDir, 'diagnostics');
-
-// Require modules using absolute paths
-const { validateProjectRoot } = require('./scripts/diagnostics/projectValidator');
-const { checkDependencies } = require('./scripts/diagnostics/dependencyChecker');
-const { checkNodeCompatibility } = require('./scripts/diagnostics/nodeCompatibility');
-const { validateDirectoryStructure } = require('./scripts/diagnostics/directoryStructure');
-const { validateElectronBuilderConfig } = require('./scripts/diagnostics/configValidator');
-
 console.log(`\n=== Fever Build System Diagnostics ===`);
 console.log(`Running diagnosis at: ${new Date().toISOString()}`);
 console.log(`Platform: ${process.platform} (${os.release()})`);
 console.log(`Architecture: ${process.arch}`);
 console.log(`Node.js: ${process.version}`);
 console.log(`Script path: ${__filename}`);
-console.log(`Scripts directory: ${scriptsDir}`);
 
 // Get root directory
 const args = process.argv.slice(2);
@@ -38,8 +26,16 @@ if (!rootDir) {
   rootDir = process.cwd();
 }
 
+// Define absolute path to scripts directory
+const scriptsDir = path.resolve(__dirname, 'scripts');
+console.log(`Scripts directory: ${scriptsDir}`);
 console.log(`Using root directory: ${rootDir}`);
-console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+
+try {
+  console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
+} catch (err) {
+  console.error(`Error reading root directory: ${err.message}`);
+}
 
 // Check for electron-builder config explicitly
 console.log('\nChecking for electron-builder config files:');
@@ -107,103 +103,128 @@ module.exports = {
   }
 }
 
+// Try loading module manually first to check for errors
+function safeRequire(modulePath) {
+  try {
+    console.log(`Attempting to require: ${modulePath}`);
+    if (require.cache[require.resolve(modulePath)]) {
+      delete require.cache[require.resolve(modulePath)];
+    }
+    const mod = require(modulePath);
+    console.log(`- Successfully loaded: ${path.basename(modulePath)}`);
+    return mod;
+  } catch (error) {
+    console.log(`- ❌ Failed to load ${modulePath}: ${error.message}`);
+    console.log(`  Full path: ${path.resolve(modulePath)}`);
+    console.log(`  Error stack: ${error.stack}`);
+    return null;
+  }
+}
+
 // Try loading modules to verify they work
 try {
   console.log('\nVerifying required modules can be loaded:');
-  const projectValidator = require('./scripts/diagnostics/projectValidator');
-  console.log('- projectValidator loaded ✅');
-  const dependencyChecker = require('./scripts/diagnostics/dependencyChecker');
-  console.log('- dependencyChecker loaded ✅');
-  const nodeCompatibility = require('./scripts/diagnostics/nodeCompatibility');
-  console.log('- nodeCompatibility loaded ✅');
-  const directoryStructure = require('./scripts/diagnostics/directoryStructure');
-  console.log('- directoryStructure loaded ✅');
-  const configValidator = require('./scripts/diagnostics/configValidator');
-  console.log('- configValidator loaded ✅');
+  
+  // Always use absolute paths for requiring modules
+  const projectValidator = safeRequire(path.resolve(__dirname, 'scripts', 'diagnostics', 'projectValidator.js'));
+  const dependencyChecker = safeRequire(path.resolve(__dirname, 'scripts', 'diagnostics', 'dependencyChecker.js'));
+  const nodeCompatibility = safeRequire(path.resolve(__dirname, 'scripts', 'diagnostics', 'nodeCompatibility.js'));
+  const directoryStructure = safeRequire(path.resolve(__dirname, 'scripts', 'diagnostics', 'directoryStructure.js'));
+  const configValidator = safeRequire(path.resolve(__dirname, 'scripts', 'diagnostics', 'configValidator.js'));
+  
+  // Run diagnostic checks
+  console.log('\nRunning diagnostic checks...');
+  let projectValid = false;
+  let missingDeps = [];
+  let scripts = {};
+  let nodeCompatible = false;
+  let directories = { scripts: false, electron: false };
+  let configValid = false;
+
+  if (projectValidator) {
+    try {
+      projectValid = projectValidator.validateProjectRoot(rootDir);
+      console.log('- Project validation completed');
+    } catch (err) {
+      console.log(`❌ Error in validateProjectRoot: ${err.message}`);
+    }
+  }
+
+  if (dependencyChecker) {
+    try {
+      const deps = dependencyChecker.checkDependencies(rootDir);
+      missingDeps = deps.missingDeps || [];
+      scripts = deps.scripts || {};
+      console.log('- Dependency check completed');
+    } catch (err) {
+      console.log(`❌ Error in checkDependencies: ${err.message}`);
+    }
+  }
+
+  if (nodeCompatibility) {
+    try {
+      nodeCompatible = nodeCompatibility.checkNodeCompatibility(rootDir);
+      console.log('- Node compatibility check completed');
+    } catch (err) {
+      console.log(`❌ Error in checkNodeCompatibility: ${err.message}`);
+    }
+  }
+
+  if (directoryStructure) {
+    try {
+      directories = directoryStructure.validateDirectoryStructure(rootDir);
+      console.log('- Directory structure validation completed');
+    } catch (err) {
+      console.log(`❌ Error in validateDirectoryStructure: ${err.message}`);
+    }
+  }
+
+  if (configValidator && foundConfigPath) {
+    try {
+      configValid = configValidator.validateElectronBuilderConfig(rootDir);
+      console.log('- Config validation completed');
+    } catch (err) {
+      console.log(`❌ Error in validateElectronBuilderConfig: ${err.message}`);
+    }
+  }
+
+  // Final report
+  console.log(`\n=== Diagnosis Summary ===`);
+  const isReady = projectValid && 
+                  missingDeps.length === 0 && 
+                  nodeCompatible &&
+                  directories.scripts &&
+                  directories.electron &&
+                  configValid;
+
+  if (isReady) {
+    console.log(`✅ The project structure appears to be ready for building.`);
+    console.log(`\nRecommended next steps:`);
+    console.log(`1. Run Vite build: npm run build`);
+    console.log(`2. Run Electron build: node build.js --debug --root="${rootDir}"`);
+  } else {
+    console.log(`❌ The project structure has issues that need to be resolved.`);
+    console.log(`\nRecommended actions:`);
+    if (missingDeps.length > 0) {
+      console.log(`- Install missing dependencies: npm install --save-dev ${missingDeps.join(' ')}`);
+    }
+    if (!nodeCompatible) {
+      console.log(`- Update electron-builder to v26+ for Node.js v22 compatibility`);
+    }
+    if (!directories.scripts || !directories.electron) {
+      console.log(`- Set up missing directory structure`);
+    }
+    if (!configValid) {
+      console.log(`- Fix electron-builder configuration issues`);
+      if (foundConfigPath) {
+        console.log(`  Config file: ${foundConfigPath}`);
+      }
+    }
+  }
 } catch (err) {
   console.log(`❌ Error loading modules: ${err.message}`);
   console.log(`Error stack: ${err.stack}`);
   console.log('Continuing with diagnosis despite module loading errors');
-}
-
-// Run diagnostic checks
-console.log('\nRunning diagnostic checks...');
-let projectValid = false;
-let missingDeps = [];
-let scripts = {};
-let nodeCompatible = false;
-let directories = { scripts: false, electron: false };
-let configValid = false;
-
-try {
-  projectValid = validateProjectRoot(rootDir);
-  console.log('- Project validation completed');
-} catch (err) {
-  console.log(`❌ Error in validateProjectRoot: ${err.message}`);
-}
-
-try {
-  const deps = checkDependencies(rootDir);
-  missingDeps = deps.missingDeps || [];
-  scripts = deps.scripts || {};
-  console.log('- Dependency check completed');
-} catch (err) {
-  console.log(`❌ Error in checkDependencies: ${err.message}`);
-}
-
-try {
-  nodeCompatible = checkNodeCompatibility(rootDir);
-  console.log('- Node compatibility check completed');
-} catch (err) {
-  console.log(`❌ Error in checkNodeCompatibility: ${err.message}`);
-}
-
-try {
-  directories = validateDirectoryStructure(rootDir);
-  console.log('- Directory structure validation completed');
-} catch (err) {
-  console.log(`❌ Error in validateDirectoryStructure: ${err.message}`);
-}
-
-try {
-  configValid = foundConfigPath ? validateElectronBuilderConfig(rootDir) : false;
-  console.log('- Config validation completed');
-} catch (err) {
-  console.log(`❌ Error in validateElectronBuilderConfig: ${err.message}`);
-}
-
-// Final report
-console.log(`\n=== Diagnosis Summary ===`);
-const isReady = projectValid && 
-                missingDeps.length === 0 && 
-                nodeCompatible &&
-                directories.scripts &&
-                directories.electron &&
-                configValid;
-
-if (isReady) {
-  console.log(`✅ The project structure appears to be ready for building.`);
-  console.log(`\nRecommended next steps:`);
-  console.log(`1. Run Vite build: npm run build`);
-  console.log(`2. Run Electron build: node build.js --debug --root="${rootDir}"`);
-} else {
-  console.log(`❌ The project structure has issues that need to be resolved.`);
-  console.log(`\nRecommended actions:`);
-  if (missingDeps.length > 0) {
-    console.log(`- Install missing dependencies: npm install --save-dev ${missingDeps.join(' ')}`);
-  }
-  if (!nodeCompatible) {
-    console.log(`- Update electron-builder to v26+ for Node.js v22 compatibility`);
-  }
-  if (!directories.scripts || !directories.electron) {
-    console.log(`- Set up missing directory structure`);
-  }
-  if (!configValid) {
-    console.log(`- Fix electron-builder configuration issues`);
-    if (foundConfigPath) {
-      console.log(`  Config file: ${foundConfigPath}`);
-    }
-  }
 }
 
 console.log(`\n=== End of Diagnosis ===\n`);

@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 
 // Ensure we're using absolute paths for script location
 const scriptDir = __dirname;
-console.log('=== Fever Environment Diagnostic Tool v2.2 ===');
+console.log('=== Fever Environment Diagnostic Tool v2.3 ===');
 console.log(`Current Node.js version: ${process.version}`);
 console.log(`Platform: ${process.platform} (${os.release()})`);
 console.log(`Architecture: ${process.arch}`);
@@ -33,35 +33,57 @@ const isProjectRoot = fs.existsSync(path.join(projectRoot, 'package.json')) &&
 
 console.log(`Is current directory project root? ${isProjectRoot ? 'YES' : 'NO'}`);
 
+// Safe require function with better error handling
+function safeRequire(filePath) {
+  try {
+    console.log(`Attempting to require: ${filePath}`);
+    
+    // Ensure we're using an absolute path
+    const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(projectRoot, filePath);
+    console.log(`Absolute path: ${absolutePath}`);
+    
+    // Check if file exists
+    if (!fs.existsSync(absolutePath)) {
+      console.log(`File does not exist: ${absolutePath}`);
+      return null;
+    }
+    
+    // Clear cache to ensure fresh load
+    if (require.cache[require.resolve(absolutePath)]) {
+      delete require.cache[require.resolve(absolutePath)];
+      console.log(`Cleared require cache for: ${absolutePath}`);
+    }
+    
+    const module = require(absolutePath);
+    console.log(`Successfully required: ${filePath}`);
+    return module;
+  } catch (err) {
+    console.log(`Error requiring ${filePath}: ${err.message}`);
+    console.log(`Stack trace: ${err.stack}`);
+    return null;
+  }
+}
+
 // List key project files
 console.log('\nChecking for key project files:');
 ['package.json', 'vite.config.ts', 'electron-builder.cjs', 'electron-builder.js', 'build.js', 'build-electron.cjs'].forEach(file => {
-  const exists = fs.existsSync(path.join(projectRoot, file));
+  const filePath = path.join(projectRoot, file);
+  const exists = fs.existsSync(filePath);
   console.log(`- ${file}: ${exists ? '✅ Found' : '❌ Missing'}`);
   
   if (exists) {
     try {
-      const stats = fs.statSync(path.join(projectRoot, file));
+      const stats = fs.statSync(filePath);
       console.log(`  - Size: ${stats.size} bytes, Modified: ${stats.mtime}`);
       
       // For JS files, try to require them and see if there's an error
       if (file.endsWith('.js') || file.endsWith('.cjs')) {
-        console.log(`  - Attempting to require ${file}...`);
-        try {
-          // Use full absolute path for require to avoid confusion
-          const fullPath = path.resolve(projectRoot, file);
-          console.log(`  - Full path: ${fullPath}`);
-          
-          // Clear require cache to ensure we get a fresh copy
-          if (require.cache[require.resolve(fullPath)]) {
-            delete require.cache[require.resolve(fullPath)];
-          }
-          
-          require(fullPath);
-          console.log(`  - ✅ Successfully required ${file}`);
-        } catch (err) {
-          console.log(`  - ❌ Error requiring ${file}: ${err.message}`);
-          console.log(`  - Error stack: ${err.stack}`);
+        // Use our safer require function
+        const module = safeRequire(filePath);
+        if (module) {
+          console.log(`  - ✅ Successfully loaded ${file}`);
+        } else {
+          console.log(`  - ❌ Failed to load ${file}`);
         }
       }
     } catch (err) {
@@ -102,8 +124,7 @@ if (!isProjectRoot) {
           
           if (fs.existsSync(configPath)) {
             try {
-              require(configPath);
-              console.log(`  - ✅ Successfully loaded ${configFile}`);
+              safeRequire(configPath);
             } catch (err) {
               console.log(`  - ❌ Error loading ${configFile}: ${err.message}`);
             }
@@ -163,7 +184,7 @@ module.exports = {
     fs.writeFileSync(configPath, defaultConfig);
     console.log(`✅ Created electron-builder.cjs successfully`);
     try {
-      const config = require(configPath);
+      const config = safeRequire(configPath);
       console.log(`✅ Loaded config successfully: ${config ? 'Valid object' : 'Invalid'}`);
     } catch (err) {
       console.log(`❌ Error loading created config: ${err.message}`);
@@ -174,7 +195,7 @@ module.exports = {
 } else {
   console.log(`electron-builder.cjs exists at ${configPath}`);
   try {
-    const config = require(configPath);
+    const config = safeRequire(configPath);
     console.log(`✅ Loaded config successfully: ${config ? 'Valid object' : 'Invalid'}`);
   } catch (err) {
     console.log(`❌ Error loading existing config: ${err.message}`);
@@ -203,4 +224,4 @@ try {
 
 console.log('\n=== Diagnostic Complete ===');
 console.log('If you need to run build.js with the correct path, try:');
-console.log('node build.js --debug --root="YOUR_PROJECT_PATH"');
+console.log(`node build.js --debug --root="${projectRoot}"`);

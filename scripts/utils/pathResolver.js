@@ -1,3 +1,4 @@
+
 const fs = require('fs');
 const path = require('path');
 
@@ -42,7 +43,7 @@ function resolveFilePath(rootDir, filePath) {
     return null;
   }
   
-  const fullPath = path.join(rootDir, filePath);
+  const fullPath = path.resolve(rootDir, filePath);
   console.log(`Checking for file at: ${fullPath}`);
   
   if (fs.existsSync(fullPath)) {
@@ -64,4 +65,38 @@ function resolveFilePath(rootDir, filePath) {
   return null;
 }
 
-module.exports = { resolveProjectRoot, resolveFilePath };
+/**
+ * Safely requires a module with better error handling
+ * @param {string} modulePath - The absolute path to the module
+ * @returns {any} The required module or null if not found
+ */
+function safeRequire(modulePath) {
+  try {
+    console.log(`Attempting to require: ${modulePath}`);
+    
+    // Clear require cache to ensure fresh load
+    if (require.cache[require.resolve(modulePath)]) {
+      delete require.cache[require.resolve(modulePath)];
+      console.log(`Cleared require cache for: ${modulePath}`);
+    }
+    
+    const requiredModule = require(modulePath);
+    console.log(`Successfully required: ${modulePath}`);
+    return requiredModule;
+  } catch (err) {
+    console.error(`Failed to require module: ${modulePath}`);
+    console.error(`Error: ${err.message}`);
+    
+    // Print directory listing to help diagnose the issue
+    try {
+      const dir = path.dirname(modulePath);
+      console.log(`Files in ${dir}: ${fs.readdirSync(dir).join(', ')}`);
+    } catch (listErr) {
+      console.error(`Couldn't list directory contents: ${listErr.message}`);
+    }
+    
+    return null;
+  }
+}
+
+module.exports = { resolveProjectRoot, resolveFilePath, safeRequire };

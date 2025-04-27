@@ -1,8 +1,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { checkBasicConfig } = require('./checks/config/basicConfigChecks');
-const { checkModuleFormat } = require('./checks/config/moduleFormatCheck');
+const { safeRequire } = require('../utils/pathResolver');
 
 function validateElectronBuilderConfig(rootDir) {
   console.log(`\n5. Checking electron-builder configuration`);
@@ -60,21 +59,27 @@ module.exports = {
   try {
     console.log(`Using config file: ${configPath}`);
     
-    // Clear require cache to ensure we get a fresh copy
-    if (require.cache[require.resolve(configPath)]) {
-      delete require.cache[require.resolve(configPath)];
-      console.log('Cleared require cache for config file');
+    // Use our safe require function instead of direct require
+    const config = safeRequire(configPath);
+    
+    if (!config) {
+      console.log('❌ Failed to load config file');
+      return false;
     }
     
-    const configContent = fs.readFileSync(configPath, 'utf-8');
+    // Basic validation of config object
+    const hasAppId = config.appId && typeof config.appId === 'string';
+    const hasProductName = config.productName && typeof config.productName === 'string';
+    const hasDirectories = config.directories && typeof config.directories === 'object';
+    const hasFiles = config.files && Array.isArray(config.files);
     
-    // Check basic configuration requirements
-    const checks = checkBasicConfig(configContent);
+    console.log(`- appId: ${hasAppId ? '✅' : '❌'}`);
+    console.log(`- productName: ${hasProductName ? '✅' : '❌'}`);
+    console.log(`- directories: ${hasDirectories ? '✅' : '❌'}`);
+    console.log(`- files: ${hasFiles ? '✅' : '❌'}`);
     
-    // Check module format
-    const hasValidModuleFormat = checkModuleFormat(configContent);
+    return hasAppId && hasProductName && hasDirectories && hasFiles;
     
-    return Object.values(checks).every(Boolean) && hasValidModuleFormat;
   } catch (err) {
     console.log(`❌ Error analyzing electron-builder config: ${err.message}`);
     console.log(`Stack: ${err.stack || 'No stack trace available'}`);

@@ -1,10 +1,7 @@
 
 #!/usr/bin/env node
 const { log } = require('./scripts/utils/logger');
-const { resolveProjectRoot } = require('./scripts/utils/pathResolver');
-const { validateBuildConfig } = require('./scripts/utils/buildValidator');
-const { executeBuild } = require('./scripts/utils/buildExecutor');
-const { verifyDependencies } = require('./scripts/verifyDependencies');
+const { resolveProjectRoot, safeRequire } = require('./scripts/utils/pathResolver');
 const fs = require('fs');
 const path = require('path');
 
@@ -39,14 +36,8 @@ async function main() {
         if (!fs.existsSync(electronBuilderCjsPath) && !fs.existsSync(electronBuilderJsPath)) {
           log('Creating electron-builder.cjs...', true);
           
-          // Check if we have a template file to copy from
-          const templatePath = path.join(__dirname, 'electron-builder.cjs');
-          if (fs.existsSync(templatePath)) {
-            fs.copyFileSync(templatePath, electronBuilderCjsPath);
-            log(`Created electron-builder.cjs by copying template: ${fs.existsSync(electronBuilderCjsPath)}`, false);
-          } else {
-            // Create from scratch with minimal config
-            const minimalConfig = `/**
+          // Create from scratch with minimal config
+          const minimalConfig = `/**
  * Fever Application Packaging Configuration
  */
 module.exports = {
@@ -61,24 +52,47 @@ module.exports = {
 };`;
             fs.writeFileSync(electronBuilderCjsPath, minimalConfig);
             log(`Created minimal electron-builder.cjs: ${fs.existsSync(electronBuilderCjsPath)}`, false);
-          }
         }
       } catch (err) {
         log(`Error reading directory: ${err.message}`, true);
       }
     }
 
+    // Load modules using safe require
+    log('Loading build modules...');
+    const buildValidatorPath = path.resolve(rootDir, 'scripts', 'utils', 'buildValidator.js');
+    const buildExecutorPath = path.resolve(rootDir, 'scripts', 'utils', 'buildExecutor.js');
+    const verifyDependenciesPath = path.resolve(rootDir, 'scripts', 'verifyDependencies.js');
+    
+    log(`Loading buildValidator from: ${buildValidatorPath}`);
+    const buildValidator = safeRequire(buildValidatorPath);
+    if (!buildValidator) {
+      throw new Error('Failed to load buildValidator module');
+    }
+    
+    log(`Loading buildExecutor from: ${buildExecutorPath}`);
+    const buildExecutor = safeRequire(buildExecutorPath);
+    if (!buildExecutor) {
+      throw new Error('Failed to load buildExecutor module');
+    }
+    
+    log(`Loading verifyDependencies from: ${verifyDependenciesPath}`);
+    const verifyDependencies = safeRequire(verifyDependenciesPath);
+    if (!verifyDependencies) {
+      throw new Error('Failed to load verifyDependencies module');
+    }
+
     // Validate build configuration
-    validateBuildConfig(rootDir);
+    buildValidator.validateBuildConfig(rootDir);
 
     // Verify dependencies
-    const depsVerified = await verifyDependencies(rootDir);
+    const depsVerified = await verifyDependencies.verifyDependencies(rootDir);
     if (!depsVerified) {
       throw new Error('Dependency verification failed');
     }
 
     // Execute build
-    await executeBuild(rootDir, dryRun);
+    await buildExecutor.executeBuild(rootDir, dryRun);
   } catch (error) {
     log(error.message, true);
     if (debugMode) {
