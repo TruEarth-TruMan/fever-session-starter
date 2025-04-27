@@ -1,16 +1,16 @@
 
 #!/usr/bin/env node
-// Enhanced build script with better diagnostics and module resolution tracking
+// Enhanced build script with dependency verification and improved module resolution
 
 const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const Module = require('module');
 
 // Add support for command-line arguments
 const args = process.argv.slice(2);
 let forceRootDir = null;
 let debugMode = false;
+let dryRun = false;
 
 // Parse command-line arguments
 args.forEach(arg => {
@@ -21,6 +21,10 @@ args.forEach(arg => {
   if (arg === '--debug') {
     debugMode = true;
     console.log('Debug mode enabled - will show detailed module resolution');
+  }
+  if (arg === '--dry-run') {
+    dryRun = true;
+    console.log('Dry run mode enabled - will simulate build without executing final commands');
   }
 });
 
@@ -44,7 +48,6 @@ const possibleRootDirs = [
   path.dirname(__dirname),
   'C:\\Users\\robbi\\fever-session-starter',
   'C:\\Users\\robbi\\Desktop\\fever-session-starter',
-  // Add more common paths that might be relevant
   path.join(process.cwd(), '..'),
   path.resolve(process.cwd(), '..')
 ].filter(Boolean);
@@ -108,70 +111,39 @@ const requiredScripts = [
   'setupBuildDirs.js',
   'generateEntitlements.js', 
   'generateUpdateExample.js', 
-  'ensureDirectories.js'
+  'ensureDirectories.js',
+  'verifyDependencies.js'
 ];
 
-// Helper function to check the content of a module
-function analyzeModuleContent(filePath) {
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const requires = [];
-    const regex = /require\(['"]([^'"]+)['"]\)/g;
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-      requires.push(match[1]);
+// Run dependency verification first
+try {
+  log('\nVerifying project dependencies...');
+  const { verifyDependencies } = require(path.join(scriptsDir, 'verifyDependencies'));
+  const depsVerified = verifyDependencies(rootDir);
+  
+  if (!depsVerified) {
+    log('Dependency verification failed. Please install missing dependencies before continuing.', true);
+    if (!dryRun) {
+      process.exit(1);
     }
-    return { 
-      size: content.length, 
-      requires,
-      lines: content.split('\n').length,
-      hasExports: content.includes('module.exports')
-    };
-  } catch (err) {
-    return { error: err.message };
+  } else {
+    log('All required dependencies verified successfully.');
   }
+} catch (err) {
+  log(`Error loading dependency verification module: ${err.message}`, true);
+  log('Will continue but build may fail due to missing dependencies.', true);
 }
 
-// Check required scripts with detailed analysis
+// Check required scripts
 log('\nChecking required script files:');
 for (const script of requiredScripts) {
   const scriptPath = path.join(scriptsDir, script);
   const exists = fs.existsSync(scriptPath);
   log(`- ${script}: ${exists ? '✅ Found' : '❌ Missing'}`);
-  
-  if (exists && debugMode) {
-    // Analyze the script file
-    const analysis = analyzeModuleContent(scriptPath);
-    log(`  - File size: ${analysis.size} bytes, ${analysis.lines} lines`);
-    log(`  - Has module.exports: ${analysis.hasExports ? 'Yes' : 'No'}`);
-    if (analysis.requires && analysis.requires.length > 0) {
-      log(`  - Requires modules: ${analysis.requires.join(', ')}`);
-      
-      // Try to find each required module
-      for (const requiredModule of analysis.requires) {
-        try {
-          // Skip node core modules
-          if (Module.builtinModules.includes(requiredModule)) {
-            log(`    - ${requiredModule}: Built-in Node.js module`);
-            continue;
-          }
-          
-          // Try to resolve the module
-          const resolvedPath = require.resolve(requiredModule, {
-            paths: [scriptsDir, rootDir, path.join(rootDir, 'node_modules')]
-          });
-          log(`    - ${requiredModule}: Found at ${resolvedPath}`);
-        } catch (err) {
-          log(`    - ${requiredModule}: ❌ Not found - ${err.code}`, true);
-        }
-      }
-    }
-  }
 }
 
 // Check for missing script files
 const missingScripts = requiredScripts.filter(script => !fs.existsSync(path.join(scriptsDir, script)));
-
 if (missingScripts.length > 0) {
   log(`Missing required script files: ${missingScripts.join(', ')}`, true);
   
@@ -189,12 +161,6 @@ if (missingScripts.length > 0) {
       } catch (err) {
         log(`Failed to rename file: ${err.message}`, true);
       }
-    } else {
-      // If the file isn't found even with case-insensitivity, try to find similar files
-      const similar = allFiles.filter(file => file.includes(lowerMissing.replace('.js', '')));
-      if (similar.length > 0) {
-        log(`Possible matches for ${missing}: ${similar.join(', ')}`);
-      }
     }
   });
   
@@ -206,21 +172,6 @@ if (missingScripts.length > 0) {
   }
 }
 
-// Add script to intercept require calls for debugging
-if (debugMode) {
-  const originalRequire = Module.prototype.require;
-  Module.prototype.require = function wrappedRequire(path) {
-    try {
-      const result = originalRequire.call(this, path);
-      console.log(`  [Module loaded successfully]: ${path}`);
-      return result;
-    } catch (err) {
-      console.error(`  [Module load error]: ${path} - ${err.message}`);
-      throw err;
-    }
-  };
-}
-
 // Verify we have the necessary files
 const requiredFiles = ['package.json', 'electron-builder.js', 'vite.config.ts', 'build-electron.cjs'];
 const missingFiles = requiredFiles.filter(file => !fs.existsSync(path.join(rootDir, file)));
@@ -229,6 +180,81 @@ if (missingFiles.length > 0) {
   log(`Missing required files: ${missingFiles.join(', ')}`, true);
   log('Please ensure all required files are present in the project root.', true);
   process.exit(1);
+}
+
+// Check if electron-builder.js is compatible with Node.js v22
+try {
+  log('\nVerifying electron-builder.js compatibility...');
+  const configPath = path.join(rootDir, 'electron-builder.js');
+  const configContent = fs.readFileSync(configPath, 'utf-8');
+  
+  // Node v22 compatibility check - electron-builder.js should be proper CommonJS
+  if (!configContent.includes('module.exports =')) {
+    log('Warning: electron-builder.js may not be using CommonJS exports format.', true);
+    log('This could cause issues with Node.js v22. Ensure it uses module.exports format.', true);
+  } else {
+    log('electron-builder.js appears to be using proper CommonJS format.');
+  }
+} catch (err) {
+  log(`Error checking electron-builder.js: ${err.message}`, true);
+}
+
+// Perform dry run of Vite build
+if (dryRun) {
+  log('\n------------------------------------------');
+  log('Simulating Vite build (dry run)...');
+  log('------------------------------------------');
+  log('Would execute: npm run build');
+  
+  // Try to parse vite.config.ts to check for obvious errors
+  try {
+    const viteConfigPath = path.join(rootDir, 'vite.config.ts');
+    log(`Checking Vite config at ${viteConfigPath}...`);
+    const viteConfig = fs.readFileSync(viteConfigPath, 'utf-8');
+    
+    // Look for common issues in the Vite config
+    log('Vite config appears to be valid TypeScript.');
+    log(`Config uses defineConfig: ${viteConfig.includes('defineConfig')}`);
+    log(`Config includes plugins: ${viteConfig.includes('plugins:')}`);
+    log(`Config sets base path: ${viteConfig.includes('base:')}`);
+    
+    if (viteConfig.includes("base: './'") || viteConfig.includes("base: process.env.ELECTRON === 'true' ? './' : '/'")) {
+      log('✅ Vite config has correct base path setting for Electron.');
+    } else {
+      log('⚠️ Vite config may need base path setting for Electron: base: process.env.ELECTRON === \'true\' ? \'.\/\' : \'/\'');
+    }
+  } catch (err) {
+    log(`Error checking Vite config: ${err.message}`, true);
+  }
+  
+  log('\n------------------------------------------');
+  log('Simulating Electron build (dry run)...');
+  log('------------------------------------------');
+  log('Would execute: node build-electron.cjs');
+  
+  // Check if build-electron.cjs is compatible with Node.js v22
+  try {
+    const electronBuildPath = path.join(rootDir, 'build-electron.cjs');
+    log(`Checking build-electron.cjs at ${electronBuildPath}...`);
+    const electronBuildContent = fs.readFileSync(electronBuildPath, 'utf-8');
+    
+    // Check for critical imports and configurations
+    log(`Contains electron-builder import: ${electronBuildContent.includes('require(\'electron-builder\')')}`);
+    log(`Contains path import: ${electronBuildContent.includes('require(\'path\')')}`);
+    log(`Contains script imports from scripts/ directory: ${electronBuildContent.includes('require(path.join(scriptsDir')}`);
+    
+    if (electronBuildContent.includes("const { setupBuildDirectories: setup }") && 
+        !electronBuildContent.includes("setupBuildDirectories = setup")) {
+      log('⚠️ Potential issue in build-electron.cjs: setupBuildDirectories function may not be properly assigned.', true);
+    }
+    
+    log('build-electron.cjs appears to be using proper CommonJS format.');
+  } catch (err) {
+    log(`Error checking build-electron.cjs: ${err.message}`, true);
+  }
+  
+  log('\n✓ Dry run completed - see above for potential issues.');
+  process.exit(0);
 }
 
 try {
@@ -263,15 +289,6 @@ try {
   }
   
   log(`Executing build script: ${buildElectronPath}`);
-  
-  // Debug the module resolution for build-electron.cjs
-  if (debugMode) {
-    log('Analyzing build-electron.cjs for module requirements:');
-    const analysis = analyzeModuleContent(buildElectronPath);
-    if (analysis.requires && analysis.requires.length > 0) {
-      log(`Required modules from build-electron.cjs: ${analysis.requires.join(', ')}`);
-    }
-  }
   
   // Run explicitly with node, using the absolute path and passing root directory as env var
   execSync(`node "${buildElectronPath}" --debug`, { 

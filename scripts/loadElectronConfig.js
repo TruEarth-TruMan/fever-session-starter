@@ -28,8 +28,15 @@ function loadElectronConfig(rootDir) {
     const parentConfigPath = path.join(path.dirname(rootDir), 'electron-builder.js');
     if (fs.existsSync(parentConfigPath)) {
       console.log(`Found config in parent directory: ${parentConfigPath}`);
-      const config = require(parentConfigPath);
-      return config;
+      try {
+        // Use dynamic import to avoid caching issues
+        delete require.cache[require.resolve(parentConfigPath)];
+        const config = require(parentConfigPath);
+        return config;
+      } catch (err) {
+        console.error(`Failed to load config from parent directory: ${err.message}`);
+        throw err;
+      }
     }
     
     // Create a minimal config if the file doesn't exist
@@ -84,12 +91,48 @@ module.exports = {
     const absolutePath = path.resolve(configPath);
     console.log(`Trying to load from absolute path: ${absolutePath}`);
     
+    // Ensure the file exists before requiring it
+    if (!fs.existsSync(absolutePath)) {
+      throw new Error(`Config file does not exist at resolved path: ${absolutePath}`);
+    }
+    
+    // For Node.js v22 compatibility, check the file content first
+    const fileContent = fs.readFileSync(absolutePath, 'utf-8');
+    if (!fileContent.includes('module.exports =')) {
+      console.warn('Warning: electron-builder.js may not be using CommonJS format. This could cause issues.');
+    }
+    
+    // Load the config explicitly with require
     const config = require(absolutePath);
+    
+    if (!config) {
+      throw new Error('Config file was loaded but returned empty or undefined');
+    }
+    
     console.log('Config loaded successfully:', config ? 'Yes' : 'No');
     return config;
   } catch (error) {
     console.error('Failed to load electron-builder config:', error);
-    throw error;
+    
+    // Try an alternative approach for Node.js v22
+    try {
+      console.log('Attempting alternative loading method for Node.js v22...');
+      const configContent = fs.readFileSync(configPath, 'utf-8');
+      // Use Function constructor as a last resort (not ideal but can work)
+      const configFn = new Function('module', 'exports', 'require', configContent);
+      const mod = { exports: {} };
+      configFn(mod, mod.exports, require);
+      
+      if (!mod.exports || Object.keys(mod.exports).length === 0) {
+        throw new Error('Alternative loading method failed to extract config');
+      }
+      
+      console.log('Config loaded using alternative method');
+      return mod.exports;
+    } catch (altError) {
+      console.error('Alternative loading method also failed:', altError);
+      throw error; // Throw the original error
+    }
   }
 }
 
