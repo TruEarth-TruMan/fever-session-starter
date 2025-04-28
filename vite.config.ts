@@ -32,7 +32,8 @@ export default defineConfig(({ mode }) => ({
           vendor: ['react', 'react-dom'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-toast'],
         }
-      }
+      },
+      external: []
     },
     // Improve Electron compatibility
     emptyOutDir: true,
