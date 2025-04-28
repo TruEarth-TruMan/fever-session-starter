@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import Landing from './Landing';
@@ -5,7 +6,7 @@ import Landing from './Landing';
 export default function Index() {
   const { user, isLoading } = useAuth();
   
-  // Show landing while checking authentication
+  // Show landing page while checking authentication
   if (isLoading) {
     return <Landing />;
   }

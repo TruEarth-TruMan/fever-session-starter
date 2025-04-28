@@ -35,7 +35,10 @@ function resolveProjectRoot(forceRootDir = null) {
   // Try common project directories
   const possibleDirs = [
     path.join(currentDir, 'fever-session-starter'),
-    path.join(parentDir, 'fever-session-starter')
+    path.join(parentDir, 'fever-session-starter'),
+    // Add more fallback paths if needed
+    path.join(currentDir, '..'),
+    path.join(parentDir, '..')
   ];
 
   for (const dir of possibleDirs) {

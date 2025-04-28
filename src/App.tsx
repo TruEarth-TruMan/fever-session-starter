@@ -1,38 +1,53 @@
 
-import { useEffect, useState } from 'react';
-import { Routes, Route, BrowserRouter } from 'react-router-dom';
-import { Toaster } from "@/components/ui/toaster";
-import { useToast } from "@/hooks/use-toast";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Index from './pages/Index';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import Dashboard from './pages/Dashboard';
+import NotFound from './pages/NotFound';
+import Sessions from './pages/Sessions';
+import Marketplace from './pages/Marketplace';
+import Welcome from './pages/Welcome';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import MainLayout from './components/layout/MainLayout';
 import './App.css';
 
-// Main application component
 function App() {
-  const [isElectron, setIsElectron] = useState(false);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    // Check if running in Electron environment
-    setIsElectron(window.electron !== undefined);
-  }, []);
-
   return (
-    <>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<div className="app-container">
-            <h1>Fever Audio Studio</h1>
-            <p>Welcome to Fever - {isElectron ? 'Electron App' : 'Web App'}</p>
-            <button onClick={() => {
-              toast({
-                title: "Fever Studio",
-                description: "Welcome to Fever Audio Studio!",
-              });
-            }}>Show Toast</button>
-          </div>} />
-        </Routes>
-      </BrowserRouter>
-      <Toaster />
-    </>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/welcome" element={<Welcome />} />
+
+        {/* Protected routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/sessions" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Sessions />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/marketplace" element={
+          <ProtectedRoute>
+            <MainLayout>
+              <Marketplace />
+            </MainLayout>
+          </ProtectedRoute>
+        } />
+        
+        {/* 404 route */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Router>
   );
 }
 
