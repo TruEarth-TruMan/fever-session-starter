@@ -140,6 +140,7 @@ function safeRequire(modulePath) {
   } catch (err) {
     console.error(`Failed to require module: ${modulePath}`);
     console.error(`Error: ${err.message}`);
+    console.error(`Stack trace: ${err.stack}`);
     
     // Print directory listing to help diagnose the issue
     try {

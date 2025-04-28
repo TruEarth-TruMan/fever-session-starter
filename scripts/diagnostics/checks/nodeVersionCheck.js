@@ -1,16 +1,26 @@
 
-const checkNodeVersion = () => {
-  const nodeVersionMajor = parseInt(process.version.split('.')[0].slice(1));
+/**
+ * Check Node.js version compatibility
+ */
+
+function checkNodeVersion() {
+  const nodeVersion = process.version;
+  console.log(`Current Node.js version: ${nodeVersion}`);
   
-  if (nodeVersionMajor >= 20) {
-    console.log(`- Running Node.js ${process.version} - checking for potential compatibility issues`);
-    
-    if (nodeVersionMajor >= 22) {
-      console.log(`- Node.js v22+ detected: Some packages may not be fully compatible`);
-      return { isCompatible: true, requiresElectronBuilderUpdate: true };
-    }
+  // Extract major version number
+  const majorVersion = parseInt(nodeVersion.substring(1).split('.')[0]);
+  console.log(`Major version: ${majorVersion}`);
+  
+  let isCompatible = true;
+  let requiresElectronBuilderUpdate = false;
+  
+  // Node.js v22 requires electron-builder v26+
+  if (majorVersion >= 22) {
+    console.log('Using Node.js v22+. electron-builder v26+ is recommended.');
+    requiresElectronBuilderUpdate = true;
   }
-  return { isCompatible: true, requiresElectronBuilderUpdate: false };
-};
+  
+  return { isCompatible, requiresElectronBuilderUpdate };
+}
 
 module.exports = { checkNodeVersion };

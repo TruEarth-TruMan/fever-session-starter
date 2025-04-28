@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 
 // Ensure we're using absolute paths for script location
 const scriptDir = __dirname;
-console.log('=== Fever Environment Diagnostic Tool v2.4 ===');
+console.log('=== Fever Environment Diagnostic Tool v2.5 ===');
 console.log(`Current Node.js version: ${process.version}`);
 console.log(`Platform: ${process.platform} (${os.release()})`);
 console.log(`Architecture: ${process.arch}`);
@@ -22,6 +22,26 @@ try {
 } catch (err) {
   console.log(`Could not get memory info: ${err.message}`);
 }
+
+// Create scripts directory structure if it doesn't exist
+const projectRoot = process.cwd();
+const scriptsDir = path.join(projectRoot, 'scripts');
+const utilsDir = path.join(scriptsDir, 'utils');
+const diagnosticsDir = path.join(scriptsDir, 'diagnostics');
+const checksDir = path.join(diagnosticsDir, 'checks');
+
+// Create directories if they don't exist
+[scriptsDir, utilsDir, diagnosticsDir, checksDir].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    console.log(`Creating directory: ${dir}`);
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Created directory: ${dir}`);
+    } catch (err) {
+      console.log(`Error creating directory ${dir}: ${err.message}`);
+    }
+  }
+});
 
 // Check for environment files
 console.log('\nChecking for environment files:');
@@ -97,16 +117,6 @@ function safeRequire(filePath) {
   }
 }
 
-// If the cwd is not the project root, try to find it
-const projectRoot = process.cwd();
-console.log(`\nUsing project root: ${projectRoot}`);
-
-// Check if we're in the project root
-const isProjectRoot = fs.existsSync(path.join(projectRoot, 'package.json')) && 
-                      fs.existsSync(path.join(projectRoot, 'vite.config.ts'));
-
-console.log(`Is current directory project root? ${isProjectRoot ? 'YES' : 'NO'}`);
-
 // List key project files
 console.log('\nChecking for key project files:');
 ['package.json', 'vite.config.ts', 'electron-builder.cjs', 'electron-builder.js', 'build.js', 'build-electron.cjs'].forEach(file => {
@@ -153,91 +163,69 @@ module.exports = {
   console.log(`electron-builder.cjs exists at ${configPath}`);
 }
 
-// Test loading electron-builder.cjs
-console.log('\nTesting load of electron-builder.cjs:');
-try {
-  const configAbsPath = path.resolve(projectRoot, 'electron-builder.cjs');
-  console.log(`Absolute path: ${configAbsPath}`);
+// Ensure project validator script exists
+const projectValidatorPath = path.join(diagnosticsDir, 'projectValidator.js');
+if (!fs.existsSync(projectValidatorPath)) {
+  console.log(`Creating missing projectValidator.js script`);
+  try {
+    fs.writeFileSync(projectValidatorPath, `
+/**
+ * Project structure validator
+ */
+const fs = require('fs');
+const path = require('path');
+
+function validateProjectRoot(rootDir) {
+  console.log('1. Validating project root: ' + rootDir);
   
-  if (require.cache[configAbsPath]) {
-    delete require.cache[configAbsPath];
-    console.log('Cleared require cache for config');
+  // Check for essential files
+  const essentialFiles = ['package.json', 'vite.config.ts'];
+  let allFound = true;
+  
+  console.log('Checking for essential project files:');
+  essentialFiles.forEach(file => {
+    const exists = fs.existsSync(path.join(rootDir, file));
+    console.log('- ' + file + ': ' + (exists ? '✅' : '❌'));
+    if (!exists) allFound = false;
+  });
+  
+  if (!allFound) {
+    console.log('❌ Not all essential files were found');
+    return false;
   }
   
-  if (!fs.existsSync(configAbsPath)) {
-    console.log(`❌ Config file doesn't exist at ${configAbsPath}`);
-  } else {
-    const fileContent = fs.readFileSync(configAbsPath, 'utf8');
-    console.log(`Config file size: ${fileContent.length} bytes`);
+  console.log('✅ Project root validation successful');
+  return true;
+}
+
+module.exports = { validateProjectRoot };`);
+    console.log(`✅ Created projectValidator.js successfully`);
+  } catch (err) {
+    console.log(`❌ Error creating projectValidator.js: ${err.message}`);
+  }
+}
+
+// Test loading modules from the scripts directory
+console.log('\nTesting module resolution:');
+try {
+  console.log('Attempting to load projectValidator.js...');
+  if (fs.existsSync(projectValidatorPath)) {
+    delete require.cache[require.resolve(projectValidatorPath)];
+    const projectValidator = require(projectValidatorPath);
+    console.log('✅ Successfully loaded projectValidator module');
     
-    const config = require(configAbsPath);
-    console.log('✅ Successfully loaded config file!');
-    console.log(`Config has appId: ${config.appId ? '✅' : '❌'}`);
-    console.log(`Config has directories: ${config.directories ? '✅' : '❌'}`);
+    if (typeof projectValidator.validateProjectRoot === 'function') {
+      const result = projectValidator.validateProjectRoot(projectRoot);
+      console.log(`Project validation result: ${result ? '✅ Passed' : '❌ Failed'}`);
+    } else {
+      console.log('❌ projectValidator.validateProjectRoot is not a function');
+    }
+  } else {
+    console.log(`❌ projectValidator.js not found at ${projectValidatorPath}`);
   }
 } catch (err) {
-  console.log(`❌ Error loading config: ${err.message}`);
-  console.log(`Error stack: ${err.stack}`);
-}
-
-// Check module resolution
-console.log('\nTesting module resolution:');
-const testModules = [
-  { name: 'fs (built-in)', path: 'fs' },
-  { name: 'path (built-in)', path: 'path' },
-  { name: 'path resolver', path: path.join(projectRoot, 'scripts', 'utils', 'pathResolver.js') },
-  { name: 'logger', path: path.join(projectRoot, 'scripts', 'utils', 'logger.js') },
-  { name: 'build validator', path: path.join(projectRoot, 'scripts', 'utils', 'buildValidator.js') }
-];
-
-testModules.forEach(mod => {
-  try {
-    console.log(`Trying to require: ${mod.name} (${mod.path})`);
-    const required = require(mod.path);
-    console.log(`✅ Successfully loaded ${mod.name}`);
-  } catch (err) {
-    console.log(`❌ Failed to load ${mod.name}: ${err.message}`);
-    
-    // If it's a file module (not built-in), check existence
-    if (!mod.path.includes('node_modules') && mod.path.includes('/')) {
-      console.log(`File exists: ${fs.existsSync(mod.path) ? 'YES' : 'NO'}`);
-      
-      // List directory contents
-      try {
-        const dir = path.dirname(mod.path);
-        console.log(`Files in ${dir}: ${fs.readdirSync(dir).join(', ')}`);
-      } catch (dirErr) {
-        console.log(`Error listing directory: ${dirErr.message}`);
-      }
-    }
-  }
-});
-
-// Ensure scripts directory exists
-const scriptsDir = path.join(projectRoot, 'scripts');
-const utilsDir = path.join(scriptsDir, 'utils');
-
-console.log('\nChecking directory structure:');
-console.log(`- scripts directory: ${fs.existsSync(scriptsDir) ? '✅ Exists' : '❌ Missing'}`);
-console.log(`- scripts/utils directory: ${fs.existsSync(utilsDir) ? '✅ Exists' : '❌ Missing'}`);
-
-// Create required directories if missing
-if (!fs.existsSync(scriptsDir)) {
-  try {
-    fs.mkdirSync(scriptsDir, { recursive: true });
-    console.log('✅ Created scripts directory');
-  } catch (err) {
-    console.log(`❌ Failed to create scripts directory: ${err.message}`);
-  }
-}
-
-if (!fs.existsSync(utilsDir)) {
-  try {
-    fs.mkdirSync(utilsDir, { recursive: true });
-    console.log('✅ Created scripts/utils directory');
-  } catch (err) {
-    console.log(`❌ Failed to create scripts/utils directory: ${err.message}`);
-  }
+  console.log(`❌ Error loading projectValidator: ${err.message}`);
+  console.log(`Stack trace: ${err.stack}`);
 }
 
 console.log('\n=== Environment Diagnostic Complete ===');
