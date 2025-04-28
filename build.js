@@ -58,7 +58,7 @@ module.exports = {
       }
     }
 
-    // Load modules using safe require
+    // Load modules using safe require with absolute paths
     log('Loading build modules...');
     const buildValidatorPath = path.resolve(rootDir, 'scripts', 'utils', 'buildValidator.js');
     const buildExecutorPath = path.resolve(rootDir, 'scripts', 'utils', 'buildExecutor.js');

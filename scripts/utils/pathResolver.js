@@ -67,21 +67,31 @@ function resolveFilePath(rootDir, filePath) {
 
 /**
  * Safely requires a module with better error handling
- * @param {string} modulePath - The absolute path to the module
+ * @param {string} modulePath - The path to the module
  * @returns {any} The required module or null if not found
  */
 function safeRequire(modulePath) {
   try {
-    console.log(`Attempting to require: ${modulePath}`);
+    // First, ensure we have an absolute path
+    const absolutePath = path.isAbsolute(modulePath) ? 
+      modulePath : path.resolve(process.cwd(), modulePath);
     
-    // Clear require cache to ensure fresh load
-    if (require.cache[require.resolve(modulePath)]) {
-      delete require.cache[require.resolve(modulePath)];
-      console.log(`Cleared require cache for: ${modulePath}`);
+    console.log(`Attempting to require: ${absolutePath}`);
+    
+    // Check if the file exists before requiring
+    if (!fs.existsSync(absolutePath)) {
+      console.error(`Module file does not exist: ${absolutePath}`);
+      return null;
     }
     
-    const requiredModule = require(modulePath);
-    console.log(`Successfully required: ${modulePath}`);
+    // Clear require cache to ensure fresh load
+    if (require.cache[require.resolve(absolutePath)]) {
+      delete require.cache[require.resolve(absolutePath)];
+      console.log(`Cleared require cache for: ${absolutePath}`);
+    }
+    
+    const requiredModule = require(absolutePath);
+    console.log(`Successfully required module: ${absolutePath}`);
     return requiredModule;
   } catch (err) {
     console.error(`Failed to require module: ${modulePath}`);
@@ -89,7 +99,8 @@ function safeRequire(modulePath) {
     
     // Print directory listing to help diagnose the issue
     try {
-      const dir = path.dirname(modulePath);
+      const dir = path.dirname(path.isAbsolute(modulePath) ? 
+        modulePath : path.resolve(process.cwd(), modulePath));
       console.log(`Files in ${dir}: ${fs.readdirSync(dir).join(', ')}`);
     } catch (listErr) {
       console.error(`Couldn't list directory contents: ${listErr.message}`);

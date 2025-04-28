@@ -9,7 +9,9 @@ function validateElectronBuilderConfig(rootDir) {
   // Check for both .cjs and .js files using absolute paths
   const possiblePaths = [
     path.resolve(rootDir, 'electron-builder.cjs'),
-    path.resolve(rootDir, 'electron-builder.js')
+    path.resolve(rootDir, 'electron-builder.js'),
+    path.resolve(rootDir, 'electron-builder.config.cjs'),
+    path.resolve(rootDir, 'electron-builder.config.js')
   ];
   
   let configPath = null;
