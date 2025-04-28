@@ -1,40 +1,51 @@
 
 /**
- * Check package versions for compatibility
+ * Package version compatibility checker
  */
 const fs = require('fs');
 const path = require('path');
+const semver = require('semver');
 
 function checkElectronBuilderVersion(rootDir) {
-  const packageJsonPath = path.join(rootDir, 'package.json');
+  console.log('Checking electron-builder version compatibility...');
   
-  if (fs.existsSync(packageJsonPath)) {
-    try {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      const electronBuilderVersion = packageJson.devDependencies?.['electron-builder'] || 
-                                     packageJson.dependencies?.['electron-builder'];
-      
-      if (electronBuilderVersion) {
-        console.log(`Found electron-builder version: ${electronBuilderVersion}`);
-        
-        // Extract version number (remove ^ or ~ if present)
-        const versionNumber = electronBuilderVersion.replace(/[\^~]/, '').split('.')[0];
-        if (parseInt(versionNumber) >= 26) {
-          console.log('✅ electron-builder v26+ detected, compatible with Node.js v22');
-          return true;
-        } else {
-          console.log('❌ electron-builder version is below v26, not fully compatible with Node.js v22');
-          return false;
-        }
-      }
-    } catch (err) {
-      console.log(`Error parsing package.json: ${err.message}`);
+  try {
+    const packageJsonPath = path.join(rootDir, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) {
+      console.log('❌ package.json not found');
+      return false;
     }
-  } else {
-    console.log(`❌ package.json not found at: ${packageJsonPath}`);
+    
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+    const electronBuilderVersion = packageJson.devDependencies?.['electron-builder'] || 
+                                 packageJson.dependencies?.['electron-builder'];
+    
+    if (!electronBuilderVersion) {
+      console.log('❌ electron-builder not found in dependencies');
+      return false;
+    }
+    
+    console.log(`Found electron-builder version: ${electronBuilderVersion}`);
+    
+    // Check if version is at least 26.0.0 (required for Node.js v22)
+    const isV26Plus = semver.gte(
+      semver.minVersion(electronBuilderVersion.replace(/^\^|~/, '')).version, 
+      '26.0.0'
+    );
+    
+    if (!isV26Plus) {
+      console.log('❌ electron-builder should be v26+ for Node.js v22 compatibility');
+      console.log('   Consider updating with: npm install --save-dev electron-builder@latest');
+      return false;
+    }
+    
+    console.log('✅ electron-builder version is compatible with Node.js v22');
+    return true;
+    
+  } catch (err) {
+    console.log(`❌ Error checking electron-builder version: ${err.message}`);
+    return false;
   }
-  
-  return false;
 }
 
 module.exports = { checkElectronBuilderVersion };

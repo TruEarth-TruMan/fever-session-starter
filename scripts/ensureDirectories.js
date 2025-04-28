@@ -1,27 +1,22 @@
 
+/**
+ * Ensures required directories exist for the build process
+ */
 const fs = require('fs');
 const path = require('path');
 
-/**
- * Ensures necessary directories exist for app distribution
- * @param {string} rootDir - The root directory of the project
- */
 function ensureDirectories(rootDir) {
-  console.log(`Ensuring directories exist starting from ${rootDir}`);
+  console.log('Ensuring required directories exist...');
   
-  if (!rootDir || typeof rootDir !== 'string') {
-    console.error('Invalid rootDir provided to ensureDirectories');
-    return;
-  }
+  const requiredDirs = [
+    path.join(rootDir, 'build'),
+    path.join(rootDir, 'build', 'icons'),
+    path.join(rootDir, 'dist'),
+    path.join(rootDir, 'release'),
+    path.join(rootDir, 'electron')
+  ];
   
-  // Define public directories for auto-updates
-  const publicDir = path.join(rootDir, 'public');
-  const downloadDir = path.join(publicDir, 'download');
-  const winDir = path.join(downloadDir, 'win');
-  const macDir = path.join(downloadDir, 'mac');
-  
-  // Create directories if they don't exist
-  [publicDir, downloadDir, winDir, macDir].forEach(dir => {
+  requiredDirs.forEach(dir => {
     if (!fs.existsSync(dir)) {
       console.log(`Creating directory: ${dir}`);
       fs.mkdirSync(dir, { recursive: true });
@@ -30,7 +25,22 @@ function ensureDirectories(rootDir) {
     }
   });
   
-  console.log('Directory structure ensured');
+  // Add placeholder icons if they don't exist
+  const iconFiles = [
+    { path: path.join(rootDir, 'build', 'icons', 'icon.ico'), type: 'Windows' },
+    { path: path.join(rootDir, 'build', 'icons', 'icon.icns'), type: 'macOS' },
+    { path: path.join(rootDir, 'build', 'icons', 'icon.png'), type: 'PNG' }
+  ];
+  
+  iconFiles.forEach(({ path: iconPath, type }) => {
+    if (!fs.existsSync(iconPath)) {
+      console.log(`Creating placeholder ${type} icon at: ${iconPath}`);
+      // Just create an empty file
+      fs.writeFileSync(iconPath, '');
+    }
+  });
+  
+  return true;
 }
 
 module.exports = { ensureDirectories };
