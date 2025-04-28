@@ -1,17 +1,22 @@
 
 /**
- * Centralized logging utility for build process
+ * Logger utility for the Fever build system
  */
 
-const getTimestamp = () => {
-  return new Date().toISOString().split('T')[1].slice(0, -1);
-};
-
+/**
+ * Logs a message to the console
+ * @param {string} message - The message to log
+ * @param {boolean} isError - Whether the message is an error
+ */
 function log(message, isError = false) {
-  const timestamp = getTimestamp();
-  const prefix = isError ? '❌ ERROR' : '🔹 INFO';
-  console[isError ? 'error' : 'log'](`[${timestamp}] ${prefix}: ${message}`);
+  const timestamp = new Date().toISOString();
+  const prefix = isError ? '[ERROR]' : '[INFO]';
+  
+  if (isError) {
+    console.error(`${prefix} ${timestamp}: ${message}`);
+  } else {
+    console.log(`${prefix} ${timestamp}: ${message}`);
+  }
 }
 
 module.exports = { log };
-

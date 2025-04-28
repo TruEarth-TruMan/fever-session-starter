@@ -20,12 +20,33 @@ function resolveProjectRoot(forcedPath) {
   
   // Check if the current directory has package.json and vite.config.ts
   const isProjectRoot = fs.existsSync(path.join(cwd, 'package.json')) && 
-                        fs.existsSync(path.join(cwd, 'vite.config.ts'));
+                        (fs.existsSync(path.join(cwd, 'vite.config.ts')) || 
+                         fs.existsSync(path.join(cwd, 'vite.config.js')));
   
   if (!isProjectRoot) {
     console.warn(`Warning: Current directory doesn't appear to be a valid project root`);
     console.warn(`Missing package.json: ${!fs.existsSync(path.join(cwd, 'package.json'))}`);
-    console.warn(`Missing vite.config.ts: ${!fs.existsSync(path.join(cwd, 'vite.config.ts'))}`);
+    console.warn(`Missing vite.config files: ${!fs.existsSync(path.join(cwd, 'vite.config.ts')) && 
+                                             !fs.existsSync(path.join(cwd, 'vite.config.js'))}`);
+  }
+  
+  // Try to find parent directories with package.json if current directory isn't root
+  if (!isProjectRoot) {
+    console.log("Searching for project root in parent directories...");
+    let testDir = cwd;
+    const maxDepth = 3; // Don't go too far up
+    
+    for (let i = 0; i < maxDepth; i++) {
+      testDir = path.dirname(testDir);
+      console.log(`Checking ${testDir} for project files...`);
+      
+      if (fs.existsSync(path.join(testDir, 'package.json')) && 
+          (fs.existsSync(path.join(testDir, 'vite.config.ts')) || 
+           fs.existsSync(path.join(testDir, 'vite.config.js')))) {
+        console.log(`Found project root at: ${testDir}`);
+        return testDir;
+      }
+    }
   }
   
   return cwd;
@@ -56,8 +77,13 @@ function resolveFilePath(rootDir, filePath) {
   
   try {
     // List directory contents to help debugging
-    const dirContents = fs.readdirSync(path.dirname(fullPath));
-    console.log(`Files in directory: ${dirContents.join(', ')}`);
+    const parentDir = path.dirname(fullPath);
+    if (fs.existsSync(parentDir)) {
+      const dirContents = fs.readdirSync(parentDir);
+      console.log(`Files in directory ${parentDir}: ${dirContents.join(', ')}`);
+    } else {
+      console.log(`Parent directory ${parentDir} doesn't exist`);
+    }
   } catch (err) {
     console.error(`Error reading directory: ${err.message}`);
   }
@@ -81,12 +107,30 @@ function safeRequire(modulePath) {
     // Check if the file exists before requiring
     if (!fs.existsSync(absolutePath)) {
       console.error(`Module file does not exist: ${absolutePath}`);
+      
+      // Try to find the file with different extensions
+      const dir = path.dirname(absolutePath);
+      const basename = path.basename(absolutePath, path.extname(absolutePath));
+      
+      if (fs.existsSync(dir)) {
+        console.log(`Searching for ${basename} in ${dir}...`);
+        const files = fs.readdirSync(dir);
+        const possibleMatches = files.filter(f => f.startsWith(basename));
+        
+        if (possibleMatches.length > 0) {
+          console.log(`Possible matches: ${possibleMatches.join(', ')}`);
+        } else {
+          console.log(`No files matching ${basename} found in ${dir}`);
+        }
+      }
+      
       return null;
     }
     
     // Clear require cache to ensure fresh load
-    if (require.cache[require.resolve(absolutePath)]) {
-      delete require.cache[require.resolve(absolutePath)];
+    const resolvedPath = require.resolve(absolutePath);
+    if (require.cache[resolvedPath]) {
+      delete require.cache[resolvedPath];
       console.log(`Cleared require cache for: ${absolutePath}`);
     }
     
@@ -101,7 +145,12 @@ function safeRequire(modulePath) {
     try {
       const dir = path.dirname(path.isAbsolute(modulePath) ? 
         modulePath : path.resolve(process.cwd(), modulePath));
-      console.log(`Files in ${dir}: ${fs.readdirSync(dir).join(', ')}`);
+      
+      if (fs.existsSync(dir)) {
+        console.log(`Files in ${dir}: ${fs.readdirSync(dir).join(', ')}`);
+      } else {
+        console.log(`Directory doesn't exist: ${dir}`);
+      }
     } catch (listErr) {
       console.error(`Couldn't list directory contents: ${listErr.message}`);
     }
