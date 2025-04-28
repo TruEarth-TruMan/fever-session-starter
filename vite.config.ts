@@ -25,6 +25,8 @@ export default defineConfig(({ mode }) => ({
     assetsDir: 'assets',
     // Ensure sourcemaps for debugging
     sourcemap: process.env.NODE_ENV !== 'production',
+    // Set target for better Electron compatibility
+    target: 'chrome110', // Target modern Electron Chromium version
     // Optimize assets for Electron
     rollupOptions: {
       output: {
@@ -33,7 +35,8 @@ export default defineConfig(({ mode }) => ({
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-toast'],
         }
       },
-      external: []
+      // Explicitly leave out external Node modules that Electron will provide
+      external: ['electron', 'path', 'fs', 'os']
     },
     // Improve Electron compatibility
     emptyOutDir: true,

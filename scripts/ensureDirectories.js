@@ -36,7 +36,7 @@ function ensureDirectories(rootDir) {
   iconFiles.forEach(({ path: iconPath, type }) => {
     if (!fs.existsSync(iconPath)) {
       console.log(`Creating placeholder ${type} icon at: ${iconPath}`);
-      // Just create an empty file
+      // Just create an empty file if it doesn't exist
       fs.writeFileSync(iconPath, '');
     }
   });

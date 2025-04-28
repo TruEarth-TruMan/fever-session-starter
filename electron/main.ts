@@ -4,20 +4,27 @@ import path from 'path';
 import { getAudioDevices } from './audioDevices';
 import { setupAutoUpdater } from './updater';
 
+// Define a function to get the correct path to resources based on environment
+function getResourcePath() {
+  // In development, resources are in the project root
+  // In production, resources are in the app.getAppPath() directory
+  const isDev = process.env.NODE_ENV === 'development';
+  return isDev ? process.cwd() : app.getAppPath();
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: true,
+      nodeIntegration: false, // Security best practice
+      contextIsolation: true, // Security best practice
       preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(process.resourcesPath, 'build', 'icons', 'icon.ico') // Windows icon path with resourcesPath
+    icon: path.join(getResourcePath(), 'build', 'icons', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
   });
 
   // Determine correct path to load based on environment
-  // In development, load from dev server. In production, load from dist
   if (process.env.NODE_ENV === 'development') {
     console.log('Running in development mode - loading from dev server');
     win.loadURL('http://localhost:8080');
@@ -45,7 +52,8 @@ function createWindow() {
         const possibleLocations = [
           path.join(__dirname, '..', 'dist', 'index.html'),
           path.join(__dirname, '..', '..', 'dist', 'index.html'),
-          path.join(process.resourcesPath, 'dist', 'index.html')
+          path.join(process.resourcesPath as string, 'dist', 'index.html'),
+          path.join(process.resourcesPath as string, 'app', 'dist', 'index.html')
         ];
         
         let loaded = false;
@@ -55,15 +63,19 @@ function createWindow() {
             win.loadFile(loc);
             loaded = true;
             break;
+          } else {
+            console.log(`Tried location but not found: ${loc}`);
           }
         }
         
         if (!loaded) {
+          console.error('Could not find index.html in any location, loading error page');
           win.loadFile(path.join(__dirname, 'error.html'));
         }
       }
     } catch (err) {
       console.error('Error loading index.html:', err);
+      win.loadFile(path.join(__dirname, 'error.html'));
     }
   }
 
@@ -81,9 +93,11 @@ app.whenReady().then(() => {
   // Set macOS dock icon if platform is macOS
   if (process.platform === 'darwin') {
     try {
-      const iconPath = path.join(__dirname, '..', 'build', 'icons', 'icon.icns');
-      app.dock.setIcon(iconPath);
-      console.log('macOS dock icon set successfully');
+      const iconPath = path.join(getResourcePath(), 'build', 'icons', 'icon.icns');
+      if (app.dock) {
+        app.dock.setIcon(iconPath);
+        console.log('macOS dock icon set successfully');
+      }
     } catch (error) {
       console.error('Failed to set macOS dock icon:', error);
     }
@@ -157,8 +171,7 @@ try {
     </script>
   </div>
 </body>
-</html>
-`;
+</html>`;
 
   // Write the error.html file to electron/dist directory
   const fs = require('fs');

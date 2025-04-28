@@ -1,10 +1,27 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { AudioDevice } from './audioDevices';
-import { audioEngine } from './audioEngine';
 
+// Define the audio engine type based on its usage
+interface AudioEngine {
+  initialize: (deviceId: string) => Promise<boolean>;
+  startRecording: () => boolean;
+  stopRecording: () => Promise<Blob>;
+  getInputLevel: () => Promise<number>;
+  cleanup: () => void;
+}
+
+// Import in a way that works in both ESM and CommonJS contexts
+// This avoids TypeScript errors while still working at runtime
+declare const require: any;
+const audioEngine: AudioEngine = require('./audioEngine').audioEngine;
+
+// Safely expose APIs to renderer process
 contextBridge.exposeInMainWorld('electron', {
+  // Audio interfaces
   detectAudioInterfaces: () => ipcRenderer.invoke('detect-audio-interfaces') as Promise<AudioDevice[]>,
+  
+  // Audio engine
   initializeAudio: async (deviceId: string) => {
     return await audioEngine.initialize(deviceId);
   },
@@ -21,11 +38,13 @@ contextBridge.exposeInMainWorld('electron', {
   cleanup: () => {
     audioEngine.cleanup();
   },
-  // New functions for app updates and telemetry
+  
+  // App info and telemetry
   getAppVersion: () => ipcRenderer.invoke('get-app-version') as Promise<string>,
   logTelemetry: (data: Record<string, any>) => ipcRenderer.invoke('log-telemetry', data) as Promise<boolean>
 });
 
+// Define the window interface for TypeScript
 declare global {
   interface Window {
     electron: {
