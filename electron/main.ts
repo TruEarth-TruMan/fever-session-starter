@@ -1,6 +1,7 @@
 
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { getAudioDevices } from './audioDevices';
 import { setupAutoUpdater } from './updater';
 
@@ -161,8 +162,6 @@ try {
 </body>
 </html>`;
 
-  const fs = require('fs');
-  // Write the error.html file to electron/dist directory
   const errorHtmlPath = path.join(__dirname, 'error.html');
   fs.writeFileSync(errorHtmlPath, errorHtmlContent);
   console.log(`Created error.html at ${errorHtmlPath}`);

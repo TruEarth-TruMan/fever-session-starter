@@ -2,7 +2,7 @@
 #!/usr/bin/env node
 const path = require('path');
 const { execSync } = require('child_process');
-const { cleanBuildArtifacts } = require('./scripts/clean');
+const { cleanBuildArtifacts } = require('./scripts/clean.js');
 
 // Get the project root directory
 const rootDir = process.cwd();
@@ -15,7 +15,7 @@ try {
   
   // 2. Ensure required directories exist
   console.log('Step 2: Ensuring required directories exist');
-  const { ensureDirectories } = require('./scripts/ensureDirectories');
+  const { ensureDirectories } = require('./scripts/ensureDirectories.js');
   ensureDirectories(rootDir);
   
   // 3. Run Vite build
