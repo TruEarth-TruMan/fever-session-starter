@@ -23,6 +23,8 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
+    // Ensure sourcemaps for debugging
+    sourcemap: process.env.NODE_ENV !== 'production',
     // Optimize assets for Electron
     rollupOptions: {
       output: {
@@ -31,6 +33,8 @@ export default defineConfig(({ mode }) => ({
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-toast'],
         }
       }
-    }
+    },
+    // Improve Electron compatibility
+    emptyOutDir: true,
   }
 }));

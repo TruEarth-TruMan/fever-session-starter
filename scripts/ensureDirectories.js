@@ -8,12 +8,13 @@ const path = require('path');
 function ensureDirectories(rootDir) {
   console.log('Ensuring required directories exist...');
   
+  // Critical directories for Electron builds
   const requiredDirs = [
     path.join(rootDir, 'build'),
     path.join(rootDir, 'build', 'icons'),
     path.join(rootDir, 'dist'),
     path.join(rootDir, 'release'),
-    path.join(rootDir, 'electron')
+    path.join(rootDir, 'electron', 'dist') // For compiled Electron files
   ];
   
   requiredDirs.forEach(dir => {

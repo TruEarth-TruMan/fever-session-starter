@@ -19,9 +19,10 @@ function setupBuildDirectories(rootDir) {
   // Define build directories
   const buildDir = path.join(rootDir, 'build');
   const iconDir = path.join(buildDir, 'icons');
+  const electronDistDir = path.join(rootDir, 'electron', 'dist');
   
   // Create directories if they don't exist
-  [buildDir, iconDir].forEach(dir => {
+  [buildDir, iconDir, electronDistDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
       console.log(`Creating directory: ${dir}`);
       fs.mkdirSync(dir, { recursive: true });
@@ -32,14 +33,14 @@ function setupBuildDirectories(rootDir) {
   
   // Create placeholder icons if they don't exist
   const iconFiles = [
-    { path: path.join(iconDir, 'icon.ico'), size: '256x256' },
-    { path: path.join(iconDir, 'icon.icns'), size: '1024x1024' },
-    { path: path.join(iconDir, 'icon.png'), size: '512x512' }
+    { path: path.join(iconDir, 'icon.ico'), size: '256x256', type: 'Windows' },
+    { path: path.join(iconDir, 'icon.icns'), size: '1024x1024', type: 'macOS' },
+    { path: path.join(iconDir, 'icon.png'), size: '512x512', type: 'PNG' }
   ];
   
   iconFiles.forEach(icon => {
     if (!fs.existsSync(icon.path)) {
-      console.log(`Creating placeholder icon: ${icon.path}`);
+      console.log(`Creating placeholder ${icon.type} icon: ${icon.path}`);
       // Create a minimal file to prevent build errors
       fs.writeFileSync(icon.path, `Placeholder ${icon.size} icon file`);
     }
@@ -49,8 +50,9 @@ function setupBuildDirectories(rootDir) {
   
   return {
     buildDir,
-    iconDir
+    iconDir,
+    electronDistDir
   };
 }
 
-module.exports = { setupBuildDirectories: setupBuildDirectories };
+module.exports = { setupBuildDirectories };
