@@ -71,6 +71,16 @@ function resolveFilePath(rootDir, filePath) {
     return fullPath;
   }
   
+  // Try adding .js and .cjs extensions
+  const extensions = ['', '.js', '.cjs', '.mjs'];
+  for (const ext of extensions) {
+    const pathWithExt = `${fullPath}${ext}`;
+    if (fs.existsSync(pathWithExt)) {
+      console.log(`Found file with extension: ${pathWithExt}`);
+      return pathWithExt;
+    }
+  }
+  
   // Log a more detailed error message
   console.error(`File not found: ${fullPath}`);
   console.log(`Directory exists: ${fs.existsSync(path.dirname(fullPath))}`);
@@ -104,9 +114,28 @@ function safeRequire(modulePath) {
     
     console.log(`Attempting to require: ${absolutePath}`);
     
-    // Check if the file exists before requiring
-    if (!fs.existsSync(absolutePath)) {
-      console.error(`Module file does not exist: ${absolutePath}`);
+    // Check different file extensions
+    const possiblePaths = [
+      absolutePath,
+      `${absolutePath}.js`,
+      `${absolutePath}.cjs`,
+      path.join(absolutePath, 'index.js'),
+      path.join(absolutePath, 'index.cjs')
+    ];
+    
+    let validPath = null;
+    
+    for (const testPath of possiblePaths) {
+      if (fs.existsSync(testPath)) {
+        console.log(`Found valid module path: ${testPath}`);
+        validPath = testPath;
+        break;
+      }
+    }
+    
+    if (!validPath) {
+      console.error(`Module file does not exist at any of these paths:`);
+      possiblePaths.forEach(p => console.log(`- ${p}`));
       
       // Try to find the file with different extensions
       const dir = path.dirname(absolutePath);
@@ -128,14 +157,14 @@ function safeRequire(modulePath) {
     }
     
     // Clear require cache to ensure fresh load
-    const resolvedPath = require.resolve(absolutePath);
+    const resolvedPath = require.resolve(validPath);
     if (require.cache[resolvedPath]) {
       delete require.cache[resolvedPath];
-      console.log(`Cleared require cache for: ${absolutePath}`);
+      console.log(`Cleared require cache for: ${validPath}`);
     }
     
-    const requiredModule = require(absolutePath);
-    console.log(`Successfully required module: ${absolutePath}`);
+    const requiredModule = require(validPath);
+    console.log(`Successfully required module: ${validPath}`);
     return requiredModule;
   } catch (err) {
     console.error(`Failed to require module: ${modulePath}`);

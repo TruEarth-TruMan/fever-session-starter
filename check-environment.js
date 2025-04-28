@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 
 // Ensure we're using absolute paths for script location
 const scriptDir = __dirname;
-console.log('=== Fever Environment Diagnostic Tool v2.5 ===');
+console.log('=== Fever Environment Diagnostic Tool v3.0 ===');
 console.log(`Current Node.js version: ${process.version}`);
 console.log(`Platform: ${process.platform} (${os.release()})`);
 console.log(`Architecture: ${process.arch}`);
@@ -42,6 +42,68 @@ const checksDir = path.join(diagnosticsDir, 'checks');
     }
   }
 });
+
+// Check for key utility files and create them if they don't exist
+const loggerPath = path.join(utilsDir, 'logger.js');
+if (!fs.existsSync(loggerPath)) {
+  console.log(`Creating missing logger.js at ${loggerPath}`);
+  try {
+    fs.writeFileSync(loggerPath, `
+function log(message, isError = false) {
+  const timestamp = new Date().toISOString();
+  const prefix = isError ? '[ERROR]' : '[INFO]';
+  if (isError) { console.error(\`\${prefix} \${timestamp}: \${message}\`); }
+  else { console.log(\`\${prefix} \${timestamp}: \${message}\`); }
+}
+module.exports = { log };`);
+    console.log(`Created logger.js successfully`);
+  } catch (err) {
+    console.log(`Error creating logger.js: ${err.message}`);
+  }
+}
+
+const pathResolverPath = path.join(utilsDir, 'pathResolver.js');
+if (!fs.existsSync(pathResolverPath)) {
+  console.log(`Creating missing pathResolver.js at ${pathResolverPath}`);
+  try {
+    fs.writeFileSync(pathResolverPath, `
+const fs = require('fs');
+const path = require('path');
+
+function resolveProjectRoot(forcedPath) {
+  if (forcedPath && fs.existsSync(forcedPath)) {
+    console.log(\`Using forced root directory: \${forcedPath}\`);
+    return forcedPath;
+  }
+  const cwd = process.cwd();
+  console.log(\`Using current directory as root: \${cwd}\`);
+  return cwd;
+}
+
+function resolveFilePath(rootDir, filePath) {
+  if (!rootDir) return null;
+  const fullPath = path.resolve(rootDir, filePath);
+  return fs.existsSync(fullPath) ? fullPath : null;
+}
+
+function safeRequire(modulePath) {
+  try {
+    const absolutePath = path.isAbsolute(modulePath) ? 
+      modulePath : path.resolve(process.cwd(), modulePath);
+    if (!fs.existsSync(absolutePath)) return null;
+    return require(absolutePath);
+  } catch (err) {
+    console.error(\`Failed to require module: \${modulePath}\`);
+    return null;
+  }
+}
+
+module.exports = { resolveProjectRoot, resolveFilePath, safeRequire };`);
+    console.log(`Created pathResolver.js successfully`);
+  } catch (err) {
+    console.log(`Error creating pathResolver.js: ${err.message}`);
+  }
+}
 
 // Check for environment files
 console.log('\nChecking for environment files:');
@@ -86,35 +148,42 @@ relevantEnvVars.forEach(envVar => {
   console.log(`- ${envVar}: ${process.env[envVar] ? 'SET' : 'NOT SET'}`);
 });
 
-// Safe require function with better error handling
-function safeRequire(filePath) {
+// Ensure we can create, access and require modules properly
+console.log('\nValidating module system:');
+
+// Create a test module
+const testModulePath = path.join(scriptsDir, 'test-module.js');
+try {
+  fs.writeFileSync(testModulePath, `
+module.exports = { 
+  testFunction: function() { 
+    return 'Test module loaded successfully'; 
+  } 
+};`);
+  console.log(`Created test module at ${testModulePath}`);
+  
+  // Try to require the test module
   try {
-    console.log(`Attempting to require: ${filePath}`);
-    
-    // Ensure we're using an absolute path
-    const absolutePath = path.isAbsolute(filePath) ? filePath : path.resolve(process.cwd(), filePath);
-    console.log(`Absolute path: ${absolutePath}`);
-    
-    // Check if file exists
-    if (!fs.existsSync(absolutePath)) {
-      console.log(`File does not exist: ${absolutePath}`);
-      return null;
+    const testModule = require(testModulePath);
+    if (testModule && typeof testModule.testFunction === 'function') {
+      console.log(`✅ Test module loaded: ${testModule.testFunction()}`);
+    } else {
+      console.log(`❌ Test module loaded but missing expected function`);
     }
-    
-    // Clear cache to ensure fresh load
-    if (require.cache[require.resolve(absolutePath)]) {
-      delete require.cache[require.resolve(absolutePath)];
-      console.log(`Cleared require cache for: ${absolutePath}`);
-    }
-    
-    const module = require(absolutePath);
-    console.log(`Successfully required: ${filePath}`);
-    return module;
-  } catch (err) {
-    console.log(`Error requiring ${filePath}: ${err.message}`);
-    console.log(`Stack trace: ${err.stack}`);
-    return null;
+  } catch (requireErr) {
+    console.log(`❌ Failed to require test module: ${requireErr.message}`);
+    console.log(`Stack trace: ${requireErr.stack}`);
   }
+  
+  // Clean up the test module
+  try {
+    fs.unlinkSync(testModulePath);
+    console.log(`Cleaned up test module`);
+  } catch (cleanErr) {
+    console.log(`Error cleaning up test module: ${cleanErr.message}`);
+  }
+} catch (testErr) {
+  console.log(`❌ Failed to create test module: ${testErr.message}`);
 }
 
 // List key project files
@@ -163,71 +232,130 @@ module.exports = {
   console.log(`electron-builder.cjs exists at ${configPath}`);
 }
 
-// Ensure project validator script exists
-const projectValidatorPath = path.join(diagnosticsDir, 'projectValidator.js');
-if (!fs.existsSync(projectValidatorPath)) {
-  console.log(`Creating missing projectValidator.js script`);
+// Check Node.js version compatibility
+console.log('\nChecking Node.js version compatibility:');
+
+// Create Node version check file if it doesn't exist
+const nodeVersionCheckPath = path.join(checksDir, 'nodeVersionCheck.js');
+if (!fs.existsSync(nodeVersionCheckPath)) {
+  console.log(`Creating nodeVersionCheck.js...`);
   try {
-    fs.writeFileSync(projectValidatorPath, `
+    fs.writeFileSync(nodeVersionCheckPath, `
 /**
- * Project structure validator
+ * Check Node.js version compatibility
+ */
+
+function checkNodeVersion() {
+  const nodeVersion = process.version;
+  console.log('Current Node.js version: ' + nodeVersion);
+  
+  // Extract major version number
+  const majorVersion = parseInt(nodeVersion.substring(1).split('.')[0]);
+  console.log('Major version: ' + majorVersion);
+  
+  let isCompatible = true;
+  let requiresElectronBuilderUpdate = false;
+  
+  // Node.js v22 requires electron-builder v26+
+  if (majorVersion >= 22) {
+    console.log('Using Node.js v22+. electron-builder v26+ is recommended.');
+    requiresElectronBuilderUpdate = true;
+  }
+  
+  return { isCompatible, requiresElectronBuilderUpdate };
+}
+
+module.exports = { checkNodeVersion };`);
+    console.log(`✅ Created nodeVersionCheck.js successfully`);
+  } catch (err) {
+    console.log(`❌ Error creating nodeVersionCheck.js: ${err.message}`);
+  }
+}
+
+// Try loading the Node version check module directly
+try {
+  console.log(`Attempting to load nodeVersionCheck.js directly...`);
+  const nodeVersionCheck = require(path.join(checksDir, 'nodeVersionCheck.js'));
+  if (nodeVersionCheck && typeof nodeVersionCheck.checkNodeVersion === 'function') {
+    const { isCompatible, requiresElectronBuilderUpdate } = nodeVersionCheck.checkNodeVersion();
+    console.log(`Node.js version check: Compatible=${isCompatible}, NeedsUpdate=${requiresElectronBuilderUpdate}`);
+  } else {
+    console.log(`❌ nodeVersionCheck.js loaded but missing checkNodeVersion function`);
+  }
+} catch (nodeVersionErr) {
+  console.log(`❌ Error loading nodeVersionCheck.js directly: ${nodeVersionErr.message}`);
+  console.log(`Stack trace: ${nodeVersionErr.stack}`);
+}
+
+// Create package version check file if it doesn't exist
+const packageVersionCheckPath = path.join(checksDir, 'packageVersionCheck.js');
+if (!fs.existsSync(packageVersionCheckPath)) {
+  console.log(`Creating packageVersionCheck.js...`);
+  try {
+    fs.writeFileSync(packageVersionCheckPath, `
+/**
+ * Check package versions for compatibility
  */
 const fs = require('fs');
 const path = require('path');
 
-function validateProjectRoot(rootDir) {
-  console.log('1. Validating project root: ' + rootDir);
+function checkElectronBuilderVersion(rootDir) {
+  const packageJsonPath = path.join(rootDir, 'package.json');
   
-  // Check for essential files
-  const essentialFiles = ['package.json', 'vite.config.ts'];
-  let allFound = true;
-  
-  console.log('Checking for essential project files:');
-  essentialFiles.forEach(file => {
-    const exists = fs.existsSync(path.join(rootDir, file));
-    console.log('- ' + file + ': ' + (exists ? '✅' : '❌'));
-    if (!exists) allFound = false;
-  });
-  
-  if (!allFound) {
-    console.log('❌ Not all essential files were found');
-    return false;
-  }
-  
-  console.log('✅ Project root validation successful');
-  return true;
-}
-
-module.exports = { validateProjectRoot };`);
-    console.log(`✅ Created projectValidator.js successfully`);
-  } catch (err) {
-    console.log(`❌ Error creating projectValidator.js: ${err.message}`);
-  }
-}
-
-// Test loading modules from the scripts directory
-console.log('\nTesting module resolution:');
-try {
-  console.log('Attempting to load projectValidator.js...');
-  if (fs.existsSync(projectValidatorPath)) {
-    delete require.cache[require.resolve(projectValidatorPath)];
-    const projectValidator = require(projectValidatorPath);
-    console.log('✅ Successfully loaded projectValidator module');
-    
-    if (typeof projectValidator.validateProjectRoot === 'function') {
-      const result = projectValidator.validateProjectRoot(projectRoot);
-      console.log(`Project validation result: ${result ? '✅ Passed' : '❌ Failed'}`);
-    } else {
-      console.log('❌ projectValidator.validateProjectRoot is not a function');
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+      const electronBuilderVersion = packageJson.devDependencies?.['electron-builder'] || 
+                                     packageJson.dependencies?.['electron-builder'];
+      
+      if (electronBuilderVersion) {
+        console.log('Found electron-builder version: ' + electronBuilderVersion);
+        
+        // Extract version number (remove ^ or ~ if present)
+        const versionNumber = electronBuilderVersion.replace(/[\\^~]/, '').split('.')[0];
+        if (parseInt(versionNumber) >= 26) {
+          console.log('✅ electron-builder v26+ detected, compatible with Node.js v22');
+          return true;
+        } else {
+          console.log('❌ electron-builder version is below v26, not fully compatible with Node.js v22');
+          return false;
+        }
+      }
+    } catch (err) {
+      console.log('Error parsing package.json: ' + err.message);
     }
   } else {
-    console.log(`❌ projectValidator.js not found at ${projectValidatorPath}`);
+    console.log('❌ package.json not found at: ' + packageJsonPath);
   }
-} catch (err) {
-  console.log(`❌ Error loading projectValidator: ${err.message}`);
-  console.log(`Stack trace: ${err.stack}`);
+  
+  return false;
+}
+
+module.exports = { checkElectronBuilderVersion };`);
+    console.log(`✅ Created packageVersionCheck.js successfully`);
+  } catch (err) {
+    console.log(`❌ Error creating packageVersionCheck.js: ${err.message}`);
+  }
+}
+
+// Try loading the package version check module directly
+try {
+  console.log(`Attempting to load packageVersionCheck.js directly...`);
+  const packageVersionCheck = require(path.join(checksDir, 'packageVersionCheck.js'));
+  if (packageVersionCheck && typeof packageVersionCheck.checkElectronBuilderVersion === 'function') {
+    const isCompatible = packageVersionCheck.checkElectronBuilderVersion(projectRoot);
+    console.log(`Package version check: Compatible=${isCompatible}`);
+  } else {
+    console.log(`❌ packageVersionCheck.js loaded but missing checkElectronBuilderVersion function`);
+  }
+} catch (packageVersionErr) {
+  console.log(`❌ Error loading packageVersionCheck.js directly: ${packageVersionErr.message}`);
+  console.log(`Stack trace: ${packageVersionErr.stack}`);
 }
 
 console.log('\n=== Environment Diagnostic Complete ===');
-console.log('If you need to run build.js with the correct path, try:');
-console.log(`node build.js --debug --root="${projectRoot}"`);
+console.log('Next steps:');
+console.log('1. First run: node diagnose.js');
+console.log('2. Then run: node build.js --debug');
+console.log(`Note: If module errors persist, try setting NODE_PATH environment variable:`);
+console.log(`export NODE_PATH=${path.resolve(projectRoot, 'node_modules')}`);

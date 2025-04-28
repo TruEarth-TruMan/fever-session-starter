@@ -23,4 +23,5 @@ function checkNodeVersion() {
   return { isCompatible, requiresElectronBuilderUpdate };
 }
 
+// Make sure this is properly exported
 module.exports = { checkNodeVersion };
