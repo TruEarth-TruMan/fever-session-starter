@@ -4,6 +4,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { safeRequire } = require('./moduleLoader');
 
 /**
  * Resolves the project root directory using various strategies
@@ -44,21 +45,6 @@ function resolveProjectRoot(forceRootDir = null) {
   }
 
   return null;
-}
-
-/**
- * Safely requires a module without crashing if it doesn't exist
- * @param {string} modulePath - Path to the module to require
- * @returns {any|null} - The required module or null if it failed
- */
-function safeRequire(modulePath) {
-  try {
-    return require(modulePath);
-  } catch (error) {
-    console.error(`Failed to require module: ${modulePath}`);
-    console.error(`Error: ${error.message}`);
-    return null;
-  }
 }
 
 module.exports = { resolveProjectRoot, safeRequire };
