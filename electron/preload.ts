@@ -12,9 +12,28 @@ interface AudioEngine {
 }
 
 // Import in a way that works in both ESM and CommonJS contexts
-// This avoids TypeScript errors while still working at runtime
-declare const require: any;
-const audioEngine: AudioEngine = require('./audioEngine').audioEngine;
+let audioEngine: AudioEngine;
+
+try {
+  // First try dynamic import (ESM style)
+  import('./audioEngine').then(module => {
+    audioEngine = module.audioEngine;
+  }).catch(() => {
+    // Fallback to require (CommonJS style)
+    const engineModule = require('./audioEngine');
+    audioEngine = engineModule.audioEngine;
+  });
+} catch (e) {
+  console.error('Failed to load audioEngine:', e);
+  // Create a stub implementation if loading fails
+  audioEngine = {
+    initialize: async () => false,
+    startRecording: () => false,
+    stopRecording: async () => new Blob(),
+    getInputLevel: async () => 0,
+    cleanup: () => {}
+  };
+}
 
 // Safely expose APIs to renderer process
 contextBridge.exposeInMainWorld('electron', {

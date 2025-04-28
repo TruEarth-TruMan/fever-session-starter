@@ -33,45 +33,33 @@ function createWindow() {
   } else {
     console.log('Running in production mode - loading from dist directory');
     try {
-      // Get the path to the index.html file
-      const indexPath = path.join(app.getAppPath(), 'dist', 'index.html');
-      console.log(`Loading index.html from: ${indexPath}`);
-      console.log(`App path: ${app.getAppPath()}`);
-      console.log(`__dirname: ${__dirname}`);
+      // Try multiple potential paths to find index.html
+      const possiblePaths = [
+        path.join(app.getAppPath(), 'dist', 'index.html'),
+        path.join(__dirname, '..', 'dist', 'index.html'),
+        path.join(__dirname, '..', '..', 'dist', 'index.html'),
+        path.join(process.resourcesPath as string, 'dist', 'index.html'),
+        path.join(process.resourcesPath as string, 'app', 'dist', 'index.html')
+      ];
       
-      // Check if the file exists
-      const fs = require('fs');
-      if (fs.existsSync(indexPath)) {
-        console.log('index.html exists, loading it now');
-        win.loadFile(indexPath);
-      } else {
-        console.error('index.html not found!');
-        console.error(`Contents of app directory: ${fs.readdirSync(app.getAppPath()).join(', ')}`);
-        
-        // Try to find index.html elsewhere
-        const possibleLocations = [
-          path.join(__dirname, '..', 'dist', 'index.html'),
-          path.join(__dirname, '..', '..', 'dist', 'index.html'),
-          path.join(process.resourcesPath as string, 'dist', 'index.html'),
-          path.join(process.resourcesPath as string, 'app', 'dist', 'index.html')
-        ];
-        
-        let loaded = false;
-        for (const loc of possibleLocations) {
-          if (fs.existsSync(loc)) {
-            console.log(`Found index.html at alternative location: ${loc}`);
-            win.loadFile(loc);
-            loaded = true;
-            break;
-          } else {
-            console.log(`Tried location but not found: ${loc}`);
-          }
+      console.log('Searching for index.html in these locations:');
+      possiblePaths.forEach(p => console.log(` - ${p} (${fs.existsSync(p) ? 'EXISTS' : 'NOT FOUND'})`));
+      
+      // Try to find index.html in any of the possible locations
+      let loaded = false;
+      for (const indexPath of possiblePaths) {
+        if (fs.existsSync(indexPath)) {
+          console.log(`Found index.html at: ${indexPath}`);
+          win.loadFile(indexPath);
+          loaded = true;
+          break;
         }
-        
-        if (!loaded) {
-          console.error('Could not find index.html in any location, loading error page');
-          win.loadFile(path.join(__dirname, 'error.html'));
-        }
+      }
+      
+      // If index.html wasn't found anywhere, load error page
+      if (!loaded) {
+        console.error('Could not find index.html in any location, loading error page');
+        win.loadFile(path.join(__dirname, 'error.html'));
       }
     } catch (err) {
       console.error('Error loading index.html:', err);
@@ -173,8 +161,8 @@ try {
 </body>
 </html>`;
 
-  // Write the error.html file to electron/dist directory
   const fs = require('fs');
+  // Write the error.html file to electron/dist directory
   const errorHtmlPath = path.join(__dirname, 'error.html');
   fs.writeFileSync(errorHtmlPath, errorHtmlContent);
   console.log(`Created error.html at ${errorHtmlPath}`);

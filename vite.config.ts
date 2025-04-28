@@ -33,9 +33,10 @@ export default defineConfig(({ mode }) => ({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-popover', '@radix-ui/react-toast'],
-        }
+        },
+        format: process.env.ELECTRON === 'true' ? 'cjs' : 'es',
       },
-      // Explicitly leave out external Node modules that Electron will provide
+      // Explicitly mark Node modules as external for Electron
       external: ['electron', 'path', 'fs', 'os']
     },
     // Improve Electron compatibility
