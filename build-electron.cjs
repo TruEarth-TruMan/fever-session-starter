@@ -5,12 +5,12 @@ const path = require('path');
 const fs = require('fs');
 
 // Import utility functions
-const { checkViteBuild } = require('./scripts/checkViteBuild');
-const { loadElectronConfig } = require('./scripts/loadElectronConfig');
-const { setupBuildDirectories } = require('./scripts/setupBuildDirs');
-const { generateMacOSEntitlements } = require('./scripts/generateEntitlements');
-const { generateUpdateExample } = require('./scripts/generateUpdateExample');
-const { ensureDirectories } = require('./scripts/ensureDirectories');
+const { checkViteBuild } = require('./scripts/checkViteBuild.js');
+const { loadElectronConfig } = require('./scripts/loadElectronConfig.js');
+const { setupBuildDirectories } = require('./scripts/setupBuildDirs.js');
+const { generateMacOSEntitlements } = require('./scripts/generateEntitlements.js');
+const { generateUpdateExample } = require('./scripts/generateUpdateExample.js');
+const { ensureDirectories } = require('./scripts/ensureDirectories.js');
 
 // Get absolute path to the current directory
 const currentDir = process.cwd();

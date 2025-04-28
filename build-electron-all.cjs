@@ -6,7 +6,7 @@ const { cleanBuildArtifacts } = require('./scripts/clean.js');
 
 // Get the project root directory
 const rootDir = process.cwd();
-console.log(`Running build-electron-all.js in ${rootDir}`);
+console.log(`Running build-electron-all.cjs in ${rootDir}`);
 
 try {
   // 1. Clean previous build artifacts
