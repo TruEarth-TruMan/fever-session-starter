@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { getAudioDevices } from '@/utils/audioDeviceDetection';
-import type { AudioDevice } from '@/types/electron';
+import type { AudioDevice as ConfigAudioDevice } from '@/hooks/useAudioDeviceConfig';
 
 interface InterfaceDetectionProps {
   onDetected: () => void;
