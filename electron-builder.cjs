@@ -80,16 +80,26 @@ module.exports = {
     uninstallDisplayName: "Fever ${version}",
   },
   
-  // App update configuration for auto-updates
+  // App update configuration for auto-updates with multiple channels
   publish: [
     {
       provider: "generic",
-      url: "https://feverstudio.live/update",
+      url: "https://feverstudio.live/update/latest",
       channel: "latest",
+    },
+    {
+      provider: "generic",
+      url: "https://feverstudio.live/update/beta",
+      channel: "beta",
+    },
+    {
+      provider: "generic",
+      url: "https://feverstudio.live/update/dev",
+      channel: "dev",
     }
   ],
   
-  // Generate update info files for auto-updater
+  // Generate update info files for all channels
   generateUpdatesFilesForAllChannels: true,
   
   // For better debugging during build process

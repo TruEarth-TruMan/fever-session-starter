@@ -1,14 +1,23 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Download, Check, AlertTriangle } from 'lucide-react';
 import { useAppUpdater } from '@/hooks/useAppUpdater';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
+import { getAppVersion } from '@/utils/appInfo';
 
 export const CheckUpdateButton: React.FC = () => {
   const { status, updateInfo, checkForUpdates, isSupported } = useAppUpdater();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [currentVersion, setCurrentVersion] = useState<string>('');
+  
+  useEffect(() => {
+    // Get current app version
+    getAppVersion().then(version => {
+      setCurrentVersion(version);
+    });
+  }, []);
   
   const handleCheckForUpdates = async () => {
     await checkForUpdates();
@@ -56,7 +65,7 @@ export const CheckUpdateButton: React.FC = () => {
       </Button>
       
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
               {status === 'checking' && "Checking for Updates..."}
@@ -67,8 +76,16 @@ export const CheckUpdateButton: React.FC = () => {
               {status === 'error' && "Update Error"}
             </DialogTitle>
             <DialogDescription className="space-y-4">
+              {/* Current version info */}
+              <div className="text-sm text-muted-foreground mt-1 mb-2">
+                Current version: {currentVersion}
+              </div>
+              
               {status === 'checking' && (
-                <p>Contacting update server...</p>
+                <div className="space-y-2">
+                  <p>Contacting update server...</p>
+                  <Progress value={100} className="w-full animate-pulse" />
+                </div>
               )}
               
               {status === 'not-available' && (
@@ -76,51 +93,68 @@ export const CheckUpdateButton: React.FC = () => {
               )}
               
               {status === 'available' && (
-                <>
+                <div className="space-y-2">
                   <p>A new version is available and will be downloaded automatically.</p>
-                  {updateInfo.version && <p className="font-medium">Version: {updateInfo.version}</p>}
-                </>
+                  {updateInfo.version && (
+                    <p className="font-medium">New version: {updateInfo.version}</p>
+                  )}
+                </div>
               )}
               
               {status === 'downloading' && updateInfo.progress && (
-                <>
+                <div className="space-y-2">
                   <p>Downloading the latest version...</p>
                   <Progress value={updateInfo.progress.percent} className="w-full" />
-                  <p>{Math.round(updateInfo.progress.percent || 0)}%</p>
-                </>
+                  <div className="flex justify-between">
+                    <span>{Math.round(updateInfo.progress.percent || 0)}%</span>
+                    {updateInfo.progress.bytesPerSecond && (
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round((updateInfo.progress.bytesPerSecond || 0) / 1024)} KB/s
+                      </span>
+                    )}
+                  </div>
+                </div>
               )}
               
               {status === 'downloaded' && (
-                <>
+                <div className="space-y-3">
                   <p>The update has been downloaded and is ready to install.</p>
                   <p>Please restart the application to apply the update.</p>
-                  {updateInfo.version && <p className="font-medium">Version: {updateInfo.version}</p>}
-                  {updateInfo.notes && (
-                    <div className="mt-2">
-                      <h4 className="font-medium">Release Notes:</h4>
-                      <p className="text-sm">{updateInfo.notes}</p>
-                    </div>
-                  )}
-                </>
+                  <div className="bg-green-50 dark:bg-green-900/30 p-3 rounded-md border border-green-200 dark:border-green-800">
+                    {updateInfo.version && (
+                      <p className="text-sm font-medium">New version: {updateInfo.version}</p>
+                    )}
+                    {updateInfo.notes && (
+                      <div className="mt-2">
+                        <h4 className="text-sm font-medium">Release Notes:</h4>
+                        <p className="text-sm mt-1 whitespace-pre-line">{updateInfo.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
               
               {status === 'error' && (
-                <>
+                <div className="space-y-2">
                   <p>There was an error checking for updates.</p>
-                  {updateInfo.error && <p className="text-red-500">{updateInfo.error}</p>}
-                </>
+                  {updateInfo.error && (
+                    <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-md border border-red-200 dark:border-red-800">
+                      <p className="text-sm text-red-600 dark:text-red-400">{updateInfo.error}</p>
+                    </div>
+                  )}
+                </div>
               )}
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex justify-end space-x-2">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Close
             </Button>
             
             {status === 'downloaded' && (
               <Button variant="default" onClick={() => {
-                // Restart and install - only works if app has been packaged
+                // Restart and install
                 if (window.electron?.quitAndInstall) {
                   window.electron.quitAndInstall();
                 } else {
@@ -130,7 +164,7 @@ export const CheckUpdateButton: React.FC = () => {
                 Restart Now
               </Button>
             )}
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

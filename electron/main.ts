@@ -1,5 +1,5 @@
 
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, autoUpdater } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { getAudioDevices } from './audioDevices';
@@ -116,6 +116,12 @@ app.whenReady().then(() => {
       console.log('Telemetry:', data);
     }
     return true;
+  });
+  
+  // Handle quit and install command from renderer
+  ipcMain.handle('quit-and-install', () => {
+    console.log('Quitting and installing update');
+    autoUpdater.quitAndInstall(true, true);
   });
 });
 

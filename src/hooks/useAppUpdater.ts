@@ -2,7 +2,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { isElectron } from '@/utils/environment';
 import { useToast } from '@/hooks/use-toast';
-import { getCurrentEnvironment, getUserUpdatePreferences, saveUpdatePreferences } from '@/utils/updateConfig';
+import { 
+  getCurrentEnvironment, 
+  getUserUpdatePreferences, 
+  saveUpdatePreferences, 
+  getBetaUserId,
+  setBetaUserId
+} from '@/utils/updateConfig';
 
 export type UpdateStatus = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
 
@@ -25,12 +31,19 @@ export function useAppUpdater() {
   const [status, setStatus] = useState<UpdateStatus>('idle');
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({});
   const [isElectronApp, setIsElectronApp] = useState<boolean>(false);
+  const [betaId, setBetaId] = useState<string | null>(null);
   const { toast } = useToast();
   
   // Initialize
   useEffect(() => {
     const electronDetected = isElectron();
     setIsElectronApp(electronDetected);
+    
+    // Load beta user ID if available
+    const storedBetaId = getBetaUserId();
+    if (storedBetaId) {
+      setBetaId(storedBetaId);
+    }
     
     if (electronDetected && window.electron?.onUpdateStatus) {
       // Set up event listener for update events from main process
@@ -108,7 +121,9 @@ export function useAppUpdater() {
     });
     
     try {
-      const result = await window.electron.checkForUpdates();
+      // Include beta ID if available
+      const options = betaId ? { betaId } : undefined;
+      const result = await window.electron.checkForUpdates(options);
       return result;
     } catch (error) {
       console.error('Error checking for updates:', error);
@@ -116,7 +131,7 @@ export function useAppUpdater() {
       setUpdateInfo({ error: error instanceof Error ? error.message : String(error) });
       return { success: false, error: String(error) };
     }
-  }, [isElectronApp, toast]);
+  }, [isElectronApp, toast, betaId]);
   
   // Set update channel
   const setUpdateChannel = useCallback(async (channel: string) => {
@@ -148,12 +163,27 @@ export function useAppUpdater() {
     }
   }, [isElectronApp, toast]);
   
+  // Register as beta tester
+  const registerAsBetaTester = useCallback((id: string) => {
+    setBetaUserId(id);
+    setBetaId(id);
+    
+    toast({
+      title: 'Beta Testing Enabled',
+      description: 'Your installation is now registered for beta updates.'
+    });
+    
+    return true;
+  }, [toast]);
+  
   return {
     status,
     updateInfo,
     isSupported: isElectronApp,
     checkForUpdates,
     setUpdateChannel,
-    currentEnvironment: getCurrentEnvironment()
+    currentEnvironment: getCurrentEnvironment(),
+    betaId,
+    registerAsBetaTester
   };
 }

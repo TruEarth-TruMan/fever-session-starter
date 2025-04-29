@@ -64,14 +64,19 @@ contextBridge.exposeInMainWorld('electron', {
   logTelemetry: (data: Record<string, any>) => ipcRenderer.invoke('log-telemetry', data) as Promise<boolean>,
   
   // Update related methods
-  checkForUpdates: () => ipcRenderer.invoke('check-for-updates') as Promise<{success: boolean, error?: string}>,
-  setUpdateChannel: (channel: string) => ipcRenderer.invoke('set-update-channel', channel) as Promise<{success: boolean, error?: string}>,
+  checkForUpdates: (options?: { betaId?: string }) => 
+    ipcRenderer.invoke('check-for-updates', options) as Promise<{success: boolean, error?: string}>,
+  setUpdateChannel: (channel: string) => 
+    ipcRenderer.invoke('set-update-channel', channel) as Promise<{success: boolean, error?: string}>,
   onUpdateStatus: (callback: (status: any) => void) => {
     const listener = (_event: any, status: any) => callback(status);
     ipcRenderer.on('update-status', listener);
     return () => {
       ipcRenderer.removeListener('update-status', listener);
     };
+  },
+  quitAndInstall: () => {
+    ipcRenderer.invoke('quit-and-install');
   }
 });
 
@@ -88,9 +93,10 @@ declare global {
       getAppVersion: () => Promise<string>;
       getEnvironment: () => string;
       logTelemetry: (data: Record<string, any>) => Promise<boolean>;
-      checkForUpdates: () => Promise<{success: boolean, error?: string}>;
+      checkForUpdates: (options?: { betaId?: string }) => Promise<{success: boolean, error?: string}>;
       setUpdateChannel: (channel: string) => Promise<{success: boolean, error?: string}>;
       onUpdateStatus: (callback: (status: any) => void) => () => void;
+      quitAndInstall?: () => void;
     };
   }
 }

@@ -15,7 +15,7 @@ export interface ElectronAPI {
   logTelemetry: (data: Record<string, any>) => Promise<boolean>;
   
   // Update related methods
-  checkForUpdates: () => Promise<{success: boolean, error?: string}>;
+  checkForUpdates: (options?: { betaId?: string }) => Promise<{success: boolean, error?: string}>;
   setUpdateChannel: (channel: string) => Promise<{success: boolean, error?: string}>;
   onUpdateStatus: (callback: (status: any) => void) => () => void;
   quitAndInstall?: () => void; // Optional as it's only available after an update is downloaded

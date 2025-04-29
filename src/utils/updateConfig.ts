@@ -10,6 +10,8 @@ export interface UpdateConfig {
   channel: string;
   checkAutomatically: boolean;
   checkIntervalMinutes: number;
+  telemetryEnabled: boolean;
+  betaUserIdentifier?: string;
 }
 
 // Environment-specific update configurations
@@ -18,19 +20,22 @@ const updateConfigs = {
     serverUrl: 'http://localhost:3000/update',
     channel: 'dev',
     checkAutomatically: true,
-    checkIntervalMinutes: 5
+    checkIntervalMinutes: 5,
+    telemetryEnabled: false
   },
   staging: {
     serverUrl: 'https://staging.feverstudio.live/update',
     channel: 'beta',
     checkAutomatically: true,
-    checkIntervalMinutes: 60
+    checkIntervalMinutes: 60,
+    telemetryEnabled: true
   },
   production: {
     serverUrl: 'https://feverstudio.live/update',
     channel: 'latest',
     checkAutomatically: true,
-    checkIntervalMinutes: 60 * 24
+    checkIntervalMinutes: 60 * 24,
+    telemetryEnabled: true
   }
 };
 
@@ -59,7 +64,15 @@ export function getCurrentEnvironment(): Environment {
  */
 export function getUpdateConfig(): UpdateConfig {
   const env = getCurrentEnvironment();
-  return updateConfigs[env];
+  const config = { ...updateConfigs[env] };
+  
+  // Add beta user identifier if available in local storage
+  const betaId = localStorage.getItem('fever_beta_user_id');
+  if (betaId) {
+    config.betaUserIdentifier = betaId;
+  }
+  
+  return config;
 }
 
 // Local storage key for user preferences
@@ -101,3 +114,19 @@ export function getUserUpdatePreferences(): UpdatePreferences {
   
   return defaultPrefs;
 }
+
+/**
+ * Set beta user identifier for update tracking
+ * @param id Unique identifier for beta tester
+ */
+export function setBetaUserId(id: string): void {
+  localStorage.setItem('fever_beta_user_id', id);
+}
+
+/**
+ * Get beta user identifier if available
+ */
+export function getBetaUserId(): string | null {
+  return localStorage.getItem('fever_beta_user_id');
+}
+

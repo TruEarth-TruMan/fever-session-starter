@@ -2,6 +2,7 @@
 import { app, autoUpdater, dialog, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import semver from 'semver';
 
 // Update check statuses that will be sent to the renderer
 export enum UpdateStatus {
@@ -42,6 +43,18 @@ function logUpdate(message: string, details?: any): void {
   }
 }
 
+interface UpdateConfig {
+  channel: string;
+  feedUrl: string;
+  betaId?: string;
+}
+
+// Default update configuration
+let currentConfig: UpdateConfig = {
+  channel: 'latest',
+  feedUrl: 'https://feverstudio.live/update/latest',
+};
+
 export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
   // Skip in development mode or when running without packaging
   if (process.env.NODE_ENV === 'development') {
@@ -55,7 +68,7 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
       `darwin-${process.arch}` : 
       `win32-${process.arch}`;
       
-    const feedURL = `https://feverstudio.live/fever-update.json`;
+    const feedURL = `https://feverstudio.live/update/latest`;
     logUpdate(`Setting up auto-updater for ${platform} with feed URL: ${feedURL}`);
     
     // Check if feed URL is accessible
@@ -65,9 +78,19 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
     autoUpdater.setFeedURL({ url: feedURL });
     
     // Setup IPC handlers for update events
-    ipcMain.handle('check-for-updates', async () => {
-      logUpdate('Manual update check triggered from renderer');
+    ipcMain.handle('check-for-updates', async (event, options?: { betaId?: string }) => {
+      logUpdate('Manual update check triggered from renderer', options);
       try {
+        // If a beta ID is provided, include it in the update check
+        if (options?.betaId) {
+          currentConfig.betaId = options.betaId;
+          
+          // Add beta ID as query parameter to feed URL
+          const betaFeedUrl = `${currentConfig.feedUrl}?betaId=${options.betaId}`;
+          logUpdate(`Setting beta feed URL: ${betaFeedUrl}`);
+          autoUpdater.setFeedURL({ url: betaFeedUrl });
+        }
+        
         autoUpdater.checkForUpdates();
         return { success: true };
       } catch (error) {
@@ -80,8 +103,36 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
     ipcMain.handle('set-update-channel', async (event, channel) => {
       logUpdate(`Setting update channel to: ${channel}`);
       try {
-        const newFeedUrl = `https://feverstudio.live/fever-update-${channel}.json`;
-        autoUpdater.setFeedURL({ url: newFeedUrl });
+        // Set proper feed URL based on channel
+        let feedUrl: string;
+        
+        switch (channel) {
+          case 'beta':
+            feedUrl = `https://feverstudio.live/update/beta`;
+            break;
+          case 'dev':
+            feedUrl = `https://feverstudio.live/update/dev`;
+            break;
+          case 'latest':
+          default:
+            feedUrl = `https://feverstudio.live/update/latest`;
+            break;
+        }
+        
+        // Store current configuration
+        currentConfig = {
+          channel,
+          feedUrl,
+          betaId: currentConfig.betaId
+        };
+        
+        // Include beta ID if available
+        if (currentConfig.betaId) {
+          feedUrl += `?betaId=${currentConfig.betaId}`;
+        }
+        
+        logUpdate(`New feed URL: ${feedUrl}`);
+        autoUpdater.setFeedURL({ url: feedUrl });
         return { success: true };
       } catch (error) {
         logUpdate('Error setting update channel', error);
@@ -106,11 +157,34 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
     autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
       logUpdate('Update downloaded', { releaseName, releaseDate, updateURL });
       
+      // Extract version from release name if possible
+      const versionMatch = releaseName?.match(/\d+\.\d+\.\d+/);
+      const version = versionMatch ? versionMatch[0] : releaseName;
+      
+      // Compare with current version to provide helpful message
+      let versionMessage = `New version ${version} is ready to install`;
+      
+      try {
+        const currentVersion = app.getVersion();
+        if (currentVersion && semver.valid(currentVersion) && version && semver.valid(version)) {
+          const diff = semver.diff(currentVersion, version);
+          if (diff === 'major') {
+            versionMessage = `Major update ${version} with new features is ready`;
+          } else if (diff === 'minor') {
+            versionMessage = `Feature update ${version} is ready to install`;
+          } else {
+            versionMessage = `Bug fix update ${version} is ready to install`;
+          }
+        }
+      } catch (error) {
+        logUpdate('Error parsing version info:', error);
+      }
+      
       // Notify the renderer process
       mainWindow.webContents.send('update-status', {
         status: UpdateStatus.DOWNLOADED,
         info: {
-          version: releaseName,
+          version: version || releaseName,
           notes: releaseNotes,
           date: releaseDate
         }
@@ -120,7 +194,7 @@ export const setupAutoUpdater = (mainWindow: BrowserWindow) => {
         type: 'info',
         buttons: ['Restart', 'Later'],
         title: 'Application Update',
-        message: process.platform === 'win32' ? releaseNotes : releaseName,
+        message: versionMessage,
         detail: 'A new version has been downloaded. Restart the application to apply the updates.'
       }).then((returnValue) => {
         if (returnValue.response === 0) {
