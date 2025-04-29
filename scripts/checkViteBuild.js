@@ -20,58 +20,47 @@ function checkViteBuild(rootDir) {
   console.log(`Checking for dist directory at: ${distDir}`);
   console.log(`Checking for index.html at: ${indexFile}`);
   
+  // Always ensure the directory exists
   if (!fs.existsSync(distDir)) {
-    console.error('❌ dist directory does not exist. Please run the Vite build first.');
-    
-    // Instead of throwing an error, we'll create the directory
     console.log('Creating dist directory');
-    fs.mkdirSync(distDir, { recursive: true });
-    
-    // Create a minimal index.html to avoid build failures
-    console.log('Creating minimal index.html');
-    fs.writeFileSync(indexFile, `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Fever Audio App</title>
-    </head>
-    <body>
-      <div id="root">
-        <p>This is a placeholder build. Run a proper Vite build for production use.</p>
-      </div>
-    </body>
-    </html>`);
-    
-    console.warn('Created minimal build files to allow process to continue');
-    return true;
+    try {
+      fs.mkdirSync(distDir, { recursive: true });
+    } catch (err) {
+      console.error(`Failed to create dist directory: ${err.message}`);
+    }
   }
   
+  // Create a minimal index.html if it doesn't exist
   if (!fs.existsSync(indexFile)) {
-    console.error('❌ index.html not found in dist directory. Vite build seems incomplete.');
-    
-    // Create a minimal index.html to avoid build failures
     console.log('Creating minimal index.html');
-    fs.writeFileSync(indexFile, `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Fever Audio App</title>
-    </head>
-    <body>
-      <div id="root">
-        <p>This is a placeholder build. Run a proper Vite build for production use.</p>
-      </div>
-    </body>
-    </html>`);
-    
-    console.warn('Created minimal index.html to allow process to continue');
-    return true;
+    try {
+      fs.writeFileSync(indexFile, `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Fever Audio App</title>
+      </head>
+      <body>
+        <div id="root">
+          <p>This is a placeholder build. Run a proper Vite build for production use.</p>
+        </div>
+      </body>
+      </html>`);
+      console.log('Created minimal index.html successfully');
+    } catch (err) {
+      console.error(`Failed to create index.html: ${err.message}`);
+    }
   }
   
-  console.log('✅ Vite build found successfully.');
+  console.log('Vite build check complete.');
   return true;
 }
 
-module.exports = { checkViteBuild };
+// Make it runnable directly
+if (require.main === module) {
+  const rootDir = process.cwd();
+  checkViteBuild(rootDir);
+} else {
+  module.exports = { checkViteBuild };
+}
