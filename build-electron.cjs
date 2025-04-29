@@ -107,7 +107,9 @@ async function buildApp() {
 
     // Load electron-builder config using utility function - this is critical
     console.log('Loading electron-builder config...');
-    const config = loadElectronConfig(rootDir);
+    const configPath = path.join(rootDir, 'electron-builder.cjs');
+    const config = require(configPath);
+    
     console.log('Electron builder config loaded successfully');
     
     if (debugMode) {

@@ -29,7 +29,14 @@ try {
   
   // 4. Run Electron build
   console.log('Step 4: Running Electron build');
-  execSync('node build-electron.cjs --debug', { 
+  
+  // Use direct require path to avoid path resolution issues
+  const buildElectronPath = path.join(rootDir, 'build-electron.cjs');
+  console.log(`Using build-electron script at: ${buildElectronPath}`);
+  console.log(`File exists: ${fs.existsSync(buildElectronPath)}`);
+  
+  // Use node directly with the full path
+  execSync(`node "${buildElectronPath}" --debug`, { 
     stdio: 'inherit',
     cwd: rootDir,
     env: { ...process.env, FORCE_ROOT_DIR: rootDir }

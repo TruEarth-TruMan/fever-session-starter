@@ -65,12 +65,17 @@ function loadElectronConfig(rootDir) {
       console.log('Cleared require cache for config file');
     }
     
-    // Use dynamic import with a try-catch as a more reliable alternative
+    // Use require directly with explicit try-catch
     console.log('Attempting to load config...');
     try {
       const config = require(configPath);
-      console.log('Config loaded successfully:');
-      logConfigSummary(config);
+      console.log('Config loaded successfully');
+      
+      // Simple validation of config object
+      if (!config || typeof config !== 'object') {
+        throw new Error('Invalid configuration object');
+      }
+      
       return config;
     } catch (err) {
       console.error('Failed to load config:', err.message);
@@ -81,21 +86,6 @@ function loadElectronConfig(rootDir) {
     console.error('Error details:', error.stack);
     throw new Error(`Failed to load electron-builder configuration: ${error.message}`);
   }
-}
-
-/**
- * Logs a summary of the loaded configuration
- * @param {Object} config - The electron-builder configuration
- */
-function logConfigSummary(config) {
-  console.log(`- appId: ${config.appId ? '✓' : '✗'}`);
-  console.log(`- productName: ${config.productName ? '✓' : '✗'}`);
-  console.log(`- directories: ${config.directories ? '✓' : '✗'}`);
-  console.log(`- files: ${config.files ? '✓' : '✗'}`);
-  console.log(`- asar: ${config.asar !== undefined ? config.asar : 'default (true)'}`);
-  console.log(`- mac config: ${config.mac ? '✓' : '✗'}`);
-  console.log(`- win config: ${config.win ? '✓' : '✗'}`);
-  console.log(`- publish config: ${config.publish ? '✓' : '✗'}`);
 }
 
 module.exports = { loadElectronConfig };
