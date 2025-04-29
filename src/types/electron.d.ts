@@ -1,6 +1,6 @@
 
 // Define the interface for the electron object exposed from preload
-interface ElectronAPI {
+export interface ElectronAPI {
   // Audio interfaces
   detectAudioInterfaces: () => Promise<AudioDevice[]>;
   initializeAudio: (deviceId: string) => Promise<boolean>;
@@ -21,11 +21,13 @@ interface ElectronAPI {
   quitAndInstall?: () => void; // Optional as it's only available after an update is downloaded
 }
 
-interface AudioDevice {
+export interface AudioDevice {
   id: string;
   name: string;
   isInput: boolean;
   isOutput: boolean;
+  type?: 'input' | 'output'; // Adding type property for compatibility
+  isScarlettInterface?: boolean;
 }
 
 // Add the electron property to the Window interface
@@ -34,5 +36,3 @@ declare global {
     electron?: ElectronAPI;
   }
 }
-
-export {};
