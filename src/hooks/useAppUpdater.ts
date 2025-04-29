@@ -176,12 +176,28 @@ export function useAppUpdater() {
     return true;
   }, [toast]);
   
+  // Install update
+  const installUpdate = useCallback(() => {
+    if (!isElectronApp || !window.electron?.quitAndInstall) {
+      return false;
+    }
+    
+    try {
+      window.electron.quitAndInstall();
+      return true;
+    } catch (error) {
+      console.error('Error installing update:', error);
+      return false;
+    }
+  }, [isElectronApp]);
+  
   return {
     status,
     updateInfo,
     isSupported: isElectronApp,
     checkForUpdates,
     setUpdateChannel,
+    installUpdate,
     currentEnvironment: getCurrentEnvironment(),
     betaId,
     registerAsBetaTester

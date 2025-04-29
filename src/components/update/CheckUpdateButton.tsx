@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { getAppVersion } from '@/utils/appInfo';
 
 export const CheckUpdateButton: React.FC = () => {
-  const { status, updateInfo, checkForUpdates, isSupported } = useAppUpdater();
+  const { status, updateInfo, checkForUpdates, isSupported, installUpdate } = useAppUpdater();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentVersion, setCurrentVersion] = useState<string>('');
   
@@ -155,11 +155,8 @@ export const CheckUpdateButton: React.FC = () => {
             {status === 'downloaded' && (
               <Button variant="default" onClick={() => {
                 // Restart and install
-                if (window.electron?.quitAndInstall) {
-                  window.electron.quitAndInstall();
-                } else {
-                  setDialogOpen(false);
-                }
+                installUpdate();
+                setDialogOpen(false);
               }}>
                 Restart Now
               </Button>
