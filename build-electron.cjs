@@ -4,84 +4,41 @@ const builder = require('electron-builder');
 const path = require('path');
 const fs = require('fs');
 
-// Import utility functions
-const { checkViteBuild } = require('./scripts/checkViteBuild.js');
-const { loadElectronConfig } = require('./scripts/loadElectronConfig.js');
-const { setupBuildDirectories } = require('./scripts/setupBuildDirs.js');
-const { generateMacOSEntitlements } = require('./scripts/generateEntitlements.js');
-const { generateUpdateExample } = require('./scripts/generateUpdateExample.js');
-const { ensureDirectories } = require('./scripts/ensureDirectories.js');
-
-// Get absolute path to the current directory
-const currentDir = process.cwd();
-console.log(`Current directory for build-electron.cjs: ${currentDir}`);
+// Import utility functions - use absolute paths to avoid resolution issues
+const rootDir = process.env.FORCE_ROOT_DIR || process.cwd();
+console.log(`Starting build-electron.cjs in: ${rootDir}`);
 console.log(`Script path: ${__filename}`);
+
+// Load with explicit paths to avoid module resolution issues
+const checkViteBuildPath = path.join(rootDir, 'scripts', 'checkViteBuild.js');
+const loadElectronConfigPath = path.join(rootDir, 'scripts', 'loadElectronConfig.js');
+const setupBuildDirsPath = path.join(rootDir, 'scripts', 'setupBuildDirs.js');
+const generateEntitlementsPath = path.join(rootDir, 'scripts', 'generateEntitlements.js');
+const generateUpdateExamplePath = path.join(rootDir, 'scripts', 'generateUpdateExample.js');
+const ensureDirectoriesPath = path.join(rootDir, 'scripts', 'ensureDirectories.js');
+
+// Check that modules exist before requiring them
+console.log(`Checking for required modules...`);
+[checkViteBuildPath, loadElectronConfigPath, setupBuildDirsPath, ensureDirectoriesPath].forEach(modulePath => {
+  console.log(`Module ${modulePath} exists: ${fs.existsSync(modulePath)}`);
+});
+
+// Import modules with explicit error handling
+const { checkViteBuild } = require(checkViteBuildPath);
+const { loadElectronConfig } = require(loadElectronConfigPath);
+const { setupBuildDirectories } = require(setupBuildDirsPath);
+const { generateMacOSEntitlements } = require(generateEntitlementsPath);
+const { generateUpdateExample } = require(generateUpdateExamplePath);
+const { ensureDirectories } = require(ensureDirectoriesPath);
 
 // Parse command line args
 const args = process.argv.slice(2);
 let debugMode = args.includes('--debug');
 
-// If FORCE_ROOT_DIR is set, use that as the root directory
-let rootDir = process.env.FORCE_ROOT_DIR || currentDir;
-console.log(`Using root directory from environment: ${rootDir}`);
-
-// Hard-coded path fallback if needed
-if (!fs.existsSync(path.join(rootDir, 'package.json'))) {
-  console.log('No package.json found in provided rootDir, trying fallback paths...');
-  
-  // Try some common paths
-  const possiblePaths = [
-    currentDir,
-    path.join(currentDir, '..'),
-    path.join(currentDir, '..', 'fever-session-starter'),
-    'C:\\Users\\robbi\\fever-session-starter'
-  ];
-  
-  for (const possiblePath of possiblePaths) {
-    console.log(`Checking path: ${possiblePath}`);
-    if (fs.existsSync(path.join(possiblePath, 'package.json'))) {
-      rootDir = possiblePath;
-      console.log(`Found package.json at: ${possiblePath}`);
-      break;
-    }
-  }
-}
-
-console.log(`Using project root directory: ${rootDir}`);
-console.log(`Files in root directory: ${fs.readdirSync(rootDir).join(', ')}`);
-
 // Change to the root directory
+console.log(`Changing to root directory: ${rootDir}`);
 process.chdir(rootDir);
-console.log(`Changed working directory to: ${process.cwd()}`);
-
-// Create scripts directory if it doesn't exist
-const scriptsDir = path.join(rootDir, 'scripts');
-if (!fs.existsSync(scriptsDir)) {
-  console.log(`Creating scripts directory: ${scriptsDir}`);
-  fs.mkdirSync(scriptsDir, { recursive: true });
-}
-
-// Check for electron-builder config explicitly
-console.log('Checking for electron-builder config files:');
-const possibleConfigs = [
-  'electron-builder.cjs', 
-  'electron-builder.js', 
-  'electron-builder.config.cjs',
-  'electron-builder.config.js'
-];
-
-let configFound = false;
-for (const configFile of possibleConfigs) {
-  const configPath = path.join(rootDir, configFile);
-  console.log(`Checking ${configFile}: ${fs.existsSync(configPath) ? 'EXISTS' : 'NOT FOUND'}`);
-  if (fs.existsSync(configPath)) {
-    configFound = true;
-  }
-}
-
-if (!configFound) {
-  console.log('No electron-builder config found, will create one automatically during build process');
-}
+console.log(`Current working directory: ${process.cwd()}`);
 
 // Main build process
 async function buildApp() {
@@ -105,12 +62,21 @@ async function buildApp() {
     console.log('Checking Vite build...');
     checkViteBuild(rootDir);
 
-    // Load electron-builder config using utility function - this is critical
+    // Load electron-builder config
     console.log('Loading electron-builder config...');
     const configPath = path.join(rootDir, 'electron-builder.cjs');
-    const config = require(configPath);
     
-    console.log('Electron builder config loaded successfully');
+    // Use direct requiring instead of utility function to simplify
+    console.log(`Loading config directly from: ${configPath}`);
+    console.log(`Config file exists: ${fs.existsSync(configPath)}`);
+    
+    // Clear require cache first
+    if (require.cache[require.resolve(configPath)]) {
+      delete require.cache[require.resolve(configPath)];
+    }
+    
+    const config = require(configPath);
+    console.log('Config loaded successfully');
     
     if (debugMode) {
       console.log('Config:', JSON.stringify(config, null, 2));

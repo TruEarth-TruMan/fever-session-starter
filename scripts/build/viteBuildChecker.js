@@ -18,12 +18,12 @@ function checkViteBuild(rootDir) {
   
   if (!fs.existsSync(distDir)) {
     console.error('❌ dist directory does not exist. Please run the Vite build first.');
-    return false;
+    throw new Error('Vite build not found. Please run npm run build first.');
   }
   
   if (!fs.existsSync(indexFile)) {
     console.error('❌ index.html not found in dist directory. Vite build seems incomplete.');
-    return false;
+    throw new Error('Vite build is incomplete. Missing index.html');
   }
   
   console.log('✅ Vite build found successfully.');
