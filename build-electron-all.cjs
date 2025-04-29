@@ -2,7 +2,7 @@
 #!/usr/bin/env node
 const path = require('path');
 const { execSync } = require('child_process');
-const { cleanBuildArtifacts } = require('./scripts/clean.js');
+const fs = require('fs');
 
 // Get the project root directory
 const rootDir = process.cwd();
@@ -11,6 +11,7 @@ console.log(`Running build-electron-all.cjs in ${rootDir}`);
 try {
   // 1. Clean previous build artifacts
   console.log('Step 1: Cleaning build artifacts');
+  const { cleanBuildArtifacts } = require('./scripts/clean.js');
   cleanBuildArtifacts(rootDir);
   
   // 2. Ensure required directories exist
