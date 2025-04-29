@@ -60,7 +60,19 @@ contextBridge.exposeInMainWorld('electron', {
   
   // App info and telemetry
   getAppVersion: () => ipcRenderer.invoke('get-app-version') as Promise<string>,
-  logTelemetry: (data: Record<string, any>) => ipcRenderer.invoke('log-telemetry', data) as Promise<boolean>
+  getEnvironment: () => process.env.NODE_ENV || 'production',
+  logTelemetry: (data: Record<string, any>) => ipcRenderer.invoke('log-telemetry', data) as Promise<boolean>,
+  
+  // Update related methods
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates') as Promise<{success: boolean, error?: string}>,
+  setUpdateChannel: (channel: string) => ipcRenderer.invoke('set-update-channel', channel) as Promise<{success: boolean, error?: string}>,
+  onUpdateStatus: (callback: (status: any) => void) => {
+    const listener = (_event: any, status: any) => callback(status);
+    ipcRenderer.on('update-status', listener);
+    return () => {
+      ipcRenderer.removeListener('update-status', listener);
+    };
+  }
 });
 
 // Define the window interface for TypeScript
@@ -74,7 +86,11 @@ declare global {
       getInputLevel: () => Promise<number>;
       cleanup: () => void;
       getAppVersion: () => Promise<string>;
+      getEnvironment: () => string;
       logTelemetry: (data: Record<string, any>) => Promise<boolean>;
+      checkForUpdates: () => Promise<{success: boolean, error?: string}>;
+      setUpdateChannel: (channel: string) => Promise<{success: boolean, error?: string}>;
+      onUpdateStatus: (callback: (status: any) => void) => () => void;
     };
   }
 }

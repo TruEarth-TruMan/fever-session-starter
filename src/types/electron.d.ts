@@ -1,17 +1,8 @@
 
-export interface AudioDevice {
-  id: string;
-  name: string;
-  type: 'input' | 'output';
-  isScarlettInterface: boolean;
-}
-
-// Define the interface for Electron's contextBridge API
-export interface ElectronAPI {
+// Define the interface for the electron object exposed from preload
+interface ElectronAPI {
   // Audio interfaces
   detectAudioInterfaces: () => Promise<AudioDevice[]>;
-  
-  // Audio engine
   initializeAudio: (deviceId: string) => Promise<boolean>;
   startRecording: () => boolean;
   stopRecording: () => Promise<Blob>;
@@ -20,12 +11,28 @@ export interface ElectronAPI {
   
   // App info and telemetry
   getAppVersion: () => Promise<string>;
+  getEnvironment: () => string;
   logTelemetry: (data: Record<string, any>) => Promise<boolean>;
+  
+  // Update related methods
+  checkForUpdates: () => Promise<{success: boolean, error?: string}>;
+  setUpdateChannel: (channel: string) => Promise<{success: boolean, error?: string}>;
+  onUpdateStatus: (callback: (status: any) => void) => () => void;
+  quitAndInstall?: () => void; // Optional as it's only available after an update is downloaded
 }
 
-// Extend the Window interface
+interface AudioDevice {
+  id: string;
+  name: string;
+  isInput: boolean;
+  isOutput: boolean;
+}
+
+// Add the electron property to the Window interface
 declare global {
   interface Window {
-    electron: ElectronAPI;
+    electron?: ElectronAPI;
   }
 }
+
+export {};
