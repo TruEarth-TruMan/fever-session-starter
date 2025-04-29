@@ -15,27 +15,30 @@ export interface UpdateConfig {
 }
 
 // Environment-specific update configurations
-const updateConfigs = {
+const updateConfigs: Record<string, UpdateConfig> = {
   development: {
     serverUrl: 'http://localhost:3000/update',
     channel: 'dev',
     checkAutomatically: true,
     checkIntervalMinutes: 5,
-    telemetryEnabled: false
+    telemetryEnabled: false,
+    betaUserIdentifier: undefined
   },
   staging: {
     serverUrl: 'https://staging.feverstudio.live/update',
     channel: 'beta',
     checkAutomatically: true,
     checkIntervalMinutes: 60,
-    telemetryEnabled: true
+    telemetryEnabled: true,
+    betaUserIdentifier: undefined
   },
   production: {
     serverUrl: 'https://feverstudio.live/update',
     channel: 'latest',
     checkAutomatically: true,
     checkIntervalMinutes: 60 * 24,
-    telemetryEnabled: true
+    telemetryEnabled: true,
+    betaUserIdentifier: undefined
   }
 };
 

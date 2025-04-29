@@ -1,4 +1,3 @@
-
 import { app, BrowserWindow, ipcMain, autoUpdater } from 'electron';
 import path from 'path';
 import fs from 'fs';
