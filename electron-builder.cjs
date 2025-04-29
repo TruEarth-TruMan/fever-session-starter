@@ -1,3 +1,4 @@
+
 /**
  * Fever Application Packaging Configuration
  * 
@@ -22,12 +23,23 @@ module.exports = {
     buildResources: "build", // Where to find icons and other resources
   },
   
+  // Use ASAR for better packaging (recommended)
+  asar: true,
+  
   // Files to include in the build
   files: [
     "dist/**/*", // Built Vite app
     "electron/**/*", // Electron main process files
+    "build/**/*", // Build resources
+    "preload.js", // Explicit include preload
+    "main.cjs", // Explicit include main
     "!node_modules/**/*", // Exclude node_modules
   ],
+  
+  // Explicitly define entry points
+  extraMetadata: {
+    main: "electron/main.js"
+  },
   
   // macOS specific configuration
   mac: {
@@ -68,7 +80,7 @@ module.exports = {
     uninstallDisplayName: "Fever ${version}",
   },
   
-  // App update configuration
+  // App update configuration for auto-updates
   publish: [
     {
       provider: "generic",
@@ -76,4 +88,10 @@ module.exports = {
       channel: "latest",
     }
   ],
+  
+  // Generate update info files for auto-updater
+  generateUpdatesFilesForAllChannels: true,
+  
+  // For better debugging during build process
+  buildDependenciesFromSource: true,
 };

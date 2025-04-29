@@ -54,92 +54,7 @@ function loadElectronConfig(rootDir) {
   
   if (!configPath) {
     console.error('No electron-builder configuration file found.');
-    
-    // Create a default configuration file - using .cjs extension
-    configPath = path.resolve(rootDir, 'electron-builder.cjs');
-    console.log(`Creating default config at: ${configPath}`);
-    
-    const defaultConfig = `
-/**
- * Fever Application Packaging Configuration
- */
-module.exports = {
-  appId: "com.fever.audioapp",
-  productName: "Fever",
-  copyright: "Copyright © 2025",
-  
-  // Icon configuration for all platforms
-  icon: "build/icons/icon",
-  
-  // Electron Builder configuration settings
-  directories: {
-    output: "release", // Where the packaged apps will be placed
-    buildResources: "build", // Where to find icons and other resources
-  },
-  
-  // Files to include in the build
-  files: [
-    "dist/**/*", // Built Vite app
-    "electron/**/*", // Electron main process files
-    "!node_modules/**/*", // Exclude node_modules
-  ],
-  
-  // macOS specific configuration
-  mac: {
-    category: "public.app-category.music",
-    target: [
-      { target: "dmg", arch: ["x64", "arm64"] },
-      { target: "zip", arch: ["x64", "arm64"] }
-    ],
-    artifactName: "Fever-\${version}-\${arch}.\${ext}",
-    darkModeSupport: true,
-    hardenedRuntime: true,
-    gatekeeperAssess: false,
-    entitlements: "build/entitlements.mac.plist",
-    entitlementsInherit: "build/entitlements.mac.plist",
-    notarize: false,
-    icon: "build/icons/icon.icns",
-  },
-  
-  // Windows specific configuration
-  win: {
-    target: [
-      { target: "nsis", arch: ["x64"] }
-    ],
-    artifactName: "Fever-\${version}-setup.\${ext}",
-    icon: "build/icons/icon.ico",
-  },
-  
-  // NSIS installer configuration for Windows
-  nsis: {
-    oneClick: false,
-    allowToChangeInstallationDirectory: true,
-    createDesktopShortcut: true,
-    createStartMenuShortcut: true,
-    shortcutName: "Fever",
-    installerIcon: "build/icons/icon.ico",
-    uninstallerIcon: "build/icons/icon.ico",
-    installerHeaderIcon: "build/icons/icon.ico",
-    uninstallDisplayName: "Fever \${version}",
-  },
-  
-  // App update configuration
-  publish: [
-    {
-      provider: "generic",
-      url: "https://feverstudio.live/update",
-      channel: "latest",
-    }
-  ],
-};`;
-    
-    try {
-      fs.writeFileSync(configPath, defaultConfig);
-      console.log(`Created default electron-builder config at: ${configPath}`);
-    } catch (err) {
-      console.error(`Failed to create default config: ${err.message}`);
-      throw new Error(`Could not create default electron-builder config: ${err.message}`);
-    }
+    throw new Error('Could not find electron-builder configuration file. Please create one at the project root.');
   }
   
   try {
@@ -151,35 +66,36 @@ module.exports = {
     }
     
     // Use dynamic import with a try-catch as a more reliable alternative
-    console.log('Attempting to load config with dynamic import...');
+    console.log('Attempting to load config...');
     try {
       const config = require(configPath);
-      console.log('Config loaded successfully. Required properties:');
-      console.log(`- appId: ${config.appId ? '✅' : '❌'}`);
-      console.log(`- directories: ${config.directories ? '✅' : '❌'}`);
-      console.log(`- files: ${config.files ? '✅' : '❌'}`);
+      console.log('Config loaded successfully:');
+      logConfigSummary(config);
       return config;
     } catch (err) {
-      console.error('Failed with dynamic import too:', err.message);
+      console.error('Failed to load config:', err.message);
       throw err;
     }
   } catch (error) {
     console.error('Failed to load electron-builder config:', error);
     console.error('Error details:', error.stack);
-    
-    // As a last resort, try to create a temporary config object
-    console.log('Creating fallback config object');
-    return {
-      appId: "com.fever.audioapp",
-      productName: "Fever",
-      copyright: "Copyright © 2025",
-      directories: { output: "release", buildResources: "build" },
-      files: ["dist/**/*", "electron/**/*", "!node_modules/**/*"],
-      mac: { category: "public.app-category.music", target: ["dmg", "zip"] },
-      win: { target: ["nsis"] },
-      publish: [{ provider: "generic", url: "https://feverstudio.live/update" }]
-    };
+    throw new Error(`Failed to load electron-builder configuration: ${error.message}`);
   }
+}
+
+/**
+ * Logs a summary of the loaded configuration
+ * @param {Object} config - The electron-builder configuration
+ */
+function logConfigSummary(config) {
+  console.log(`- appId: ${config.appId ? '✓' : '✗'}`);
+  console.log(`- productName: ${config.productName ? '✓' : '✗'}`);
+  console.log(`- directories: ${config.directories ? '✓' : '✗'}`);
+  console.log(`- files: ${config.files ? '✓' : '✗'}`);
+  console.log(`- asar: ${config.asar !== undefined ? config.asar : 'default (true)'}`);
+  console.log(`- mac config: ${config.mac ? '✓' : '✗'}`);
+  console.log(`- win config: ${config.win ? '✓' : '✗'}`);
+  console.log(`- publish config: ${config.publish ? '✓' : '✗'}`);
 }
 
 module.exports = { loadElectronConfig };
