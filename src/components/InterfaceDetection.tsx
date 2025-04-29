@@ -9,25 +9,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAudioEngine } from '@/hooks/useAudioEngine';
-
-// Declare the electron global type
-declare global {
-  interface Window {
-    electron: {
-      detectAudioInterfaces: () => Promise<{
-        id: string;
-        name: string;
-        type: 'input' | 'output';
-        isScarlettInterface: boolean;
-      }[]>;
-      initializeAudio: (deviceId: string) => Promise<boolean>;
-      startRecording: () => boolean;
-      stopRecording: () => Promise<Blob>;
-      getInputLevel: () => Promise<number>;
-      cleanup: () => void;
-    };
-  }
-}
+import { getAudioDevices } from '@/utils/audioDeviceDetection';
+import type { AudioDevice } from '@/types/electron';
 
 interface InterfaceDetectionProps {
   onDetected: () => void;
@@ -43,19 +26,13 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
   useEffect(() => {
     const detectInterfaces = async () => {
       try {
-        if (window.electron) {
-          const devices = await window.electron.detectAudioInterfaces();
-          const scarlettDevice = devices.find(device => device.isScarlettInterface);
-          
-          if (scarlettDevice) {
-            setSelectedDevice(scarlettDevice.id);
-            setDetected(true);
-          }
-        } else {
-          // Fallback for web
-          setTimeout(() => {
-            setDetected(true);
-          }, 2000);
+        setDetecting(true);
+        const devices = await getAudioDevices();
+        const scarlettDevice = devices.find(device => device.isScarlettInterface);
+        
+        if (scarlettDevice) {
+          setSelectedDevice(scarlettDevice.id);
+          setDetected(true);
         }
       } catch (err) {
         setError('Failed to detect audio interfaces');

@@ -1,28 +1,10 @@
 
 import { useState, useEffect } from 'react';
+import type { ElectronAPI } from '@/types/electron';
 
 export interface AudioBlob {
   blob: Blob;
   url: string;
-}
-
-// Move window.electron type declaration to a separate types file
-declare global {
-  interface Window {
-    electron: {
-      detectAudioInterfaces: () => Promise<{
-        id: string;
-        name: string;
-        type: 'input' | 'output';
-        isScarlettInterface: boolean;
-      }[]>;
-      initializeAudio: (deviceId: string) => Promise<boolean>;
-      startRecording: () => boolean;
-      stopRecording: () => Promise<Blob>;
-      getInputLevel: () => Promise<number>;
-      cleanup: () => void;
-    };
-  }
 }
 
 export const useAudioEngine = (deviceId: string | null) => {
@@ -36,26 +18,70 @@ export const useAudioEngine = (deviceId: string | null) => {
     let levelInterval: NodeJS.Timeout;
 
     const initialize = async () => {
-      if (!deviceId || !window.electron) return;
+      if (!deviceId) return;
 
       try {
-        const success = await window.electron.initializeAudio(deviceId);
-        if (success) {
-          setIsInitialized(true);
-          setError(null);
-          const ctx = new AudioContext({
-            sampleRate: 48000,
-            latencyHint: 'interactive'
-          });
-          setAudioContext(ctx);
+        // Initialize audio based on environment
+        if (window.electron?.initializeAudio) {
+          // Electron environment
+          const success = await window.electron.initializeAudio(deviceId);
+          if (success) {
+            setIsInitialized(true);
+            setError(null);
+            
+            // Set up audio context
+            const ctx = new AudioContext({
+              sampleRate: 48000,
+              latencyHint: 'interactive'
+            });
+            setAudioContext(ctx);
 
-          // Start monitoring input levels
-          levelInterval = setInterval(async () => {
-            const level = await window.electron.getInputLevel();
-            setInputLevel(level);
-          }, 100);
+            // Start monitoring input levels
+            levelInterval = setInterval(async () => {
+              if (window.electron) {
+                const level = await window.electron.getInputLevel();
+                setInputLevel(level);
+              }
+            }, 100);
+          } else {
+            setError('Failed to initialize audio engine');
+          }
         } else {
-          setError('Failed to initialize audio engine');
+          // Web environment fallback
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+              audio: { deviceId: { exact: deviceId } } 
+            });
+            
+            // Create web audio context
+            const ctx = new AudioContext({
+              sampleRate: 48000,
+              latencyHint: 'interactive'
+            });
+            
+            // Create analyzer for input level monitoring
+            const source = ctx.createMediaStreamSource(stream);
+            const analyzer = ctx.createAnalyser();
+            analyzer.fftSize = 256;
+            source.connect(analyzer);
+            
+            setAudioContext(ctx);
+            setIsInitialized(true);
+            setError(null);
+            
+            // Monitor input levels
+            const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+            levelInterval = setInterval(() => {
+              analyzer.getByteFrequencyData(dataArray);
+              // Calculate average level
+              const average = dataArray.reduce((sum, value) => sum + value, 0) / dataArray.length;
+              // Normalize to 0-1 range
+              setInputLevel(average / 255);
+            }, 100);
+          } catch (err) {
+            setError('Failed to access microphone');
+            console.error('Media device error:', err);
+          }
         }
       } catch (err) {
         setError('Error initializing audio engine');
@@ -67,7 +93,7 @@ export const useAudioEngine = (deviceId: string | null) => {
 
     return () => {
       if (levelInterval) clearInterval(levelInterval);
-      if (window.electron) {
+      if (window.electron?.cleanup) {
         window.electron.cleanup();
       }
       if (audioContext) {

@@ -1,11 +1,12 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getAudioDevices } from '@/utils/audioDeviceDetection';
 
 export interface AudioDevice {
   id: string;
   name: string;
   type: 'input' | 'output';
+  isScarlettInterface?: boolean;
 }
 
 export interface AudioDeviceConfig {
@@ -29,7 +30,7 @@ export const useAudioDeviceConfig = () => {
   const refreshDevices = async () => {
     setConfig(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      const devices = await window.electron?.detectAudioInterfaces() || [];
+      const devices = await getAudioDevices();
       
       // Group devices by type
       const inputs = devices.filter(d => d.type === 'input');
