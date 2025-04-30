@@ -16,6 +16,34 @@ if (fs.existsSync(path.join(rootDir, 'scripts'))) {
   scriptFiles.forEach(file => console.log(` - ${file}`));
 }
 
+// Function to copy directory contents
+function copyDirectory(source, destination) {
+  if (!fs.existsSync(source)) {
+    console.error(`Source directory not found: ${source}`);
+    return false;
+  }
+
+  if (!fs.existsSync(destination)) {
+    fs.mkdirSync(destination, { recursive: true });
+  }
+
+  const entries = fs.readdirSync(source, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(source, entry.name);
+    const destPath = path.join(destination, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDirectory(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+      console.log(`Copied: ${srcPath} -> ${destPath}`);
+    }
+  }
+  
+  return true;
+}
+
 try {
   // 1. Clean previous build artifacts
   console.log('Step 1: Cleaning build artifacts');
@@ -28,7 +56,7 @@ try {
     console.warn(`Clean script not found at ${cleanPath}, skipping cleaning step`);
     console.log('Creating basic clean process');
     // Minimal cleaning if script not found
-    ['dist', 'electron/dist', 'release'].forEach(dir => {
+    ['dist', 'electron/dist', 'dist-electron', 'release'].forEach(dir => {
       const dirPath = path.join(rootDir, dir);
       if (fs.existsSync(dirPath)) {
         try {
@@ -43,7 +71,7 @@ try {
   
   // 2. Ensure required directories exist
   console.log('Step 2: Ensuring required directories exist');
-  ['build', 'build/icons', 'dist', 'release', 'electron/dist'].forEach(dir => {
+  ['build', 'build/icons', 'dist', 'release', 'electron/dist', 'dist-electron'].forEach(dir => {
     const dirPath = path.join(rootDir, dir);
     if (!fs.existsSync(dirPath)) {
       console.log(`Creating ${dirPath}`);
@@ -84,8 +112,28 @@ try {
     console.log('Continuing with build process despite Vite build failure');
   }
   
-  // 4. Run Electron build directly with node
-  console.log('Step 4: Running Electron build');
+  // 4. Compile Electron TypeScript and copy to dist-electron
+  console.log('Step 4: Compiling and copying Electron files');
+  const electronDistDir = path.join(rootDir, 'electron', 'dist');
+  const distElectronDir = path.join(rootDir, 'dist-electron');
+  
+  // Ensure the directories exist
+  [electronDistDir, distElectronDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      console.log(`Creating ${dir}`);
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  });
+  
+  // Copy files from electron/dist to dist-electron
+  console.log(`Copying Electron files from ${electronDistDir} to ${distElectronDir}`);
+  if (fs.existsSync(electronDistDir)) {
+    copyDirectory(electronDistDir, distElectronDir);
+    console.log('Electron files copied successfully');
+  }
+  
+  // 5. Run Electron build directly with node
+  console.log('Step 5: Running Electron build');
   const buildElectronPath = path.join(rootDir, 'build-electron.cjs');
   console.log(`Using build-electron script at: ${buildElectronPath}`);
   

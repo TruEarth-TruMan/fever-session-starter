@@ -1,3 +1,4 @@
+
 import { app, BrowserWindow, ipcMain, autoUpdater } from 'electron';
 import path from 'path';
 import fs from 'fs';
@@ -12,6 +13,41 @@ function getResourcePath() {
   return isDev ? process.cwd() : app.getAppPath();
 }
 
+// Function to ensure that the preload script path is correctly resolved
+function getPreloadPath() {
+  // First, log the directory paths for debugging
+  console.log(`__dirname: ${__dirname}`);
+  console.log(`App path: ${app.getAppPath()}`);
+  
+  // Check multiple potential paths for the preload script
+  const possiblePaths = [
+    path.join(__dirname, 'preload.js'),
+    path.join(__dirname, '..', 'dist-electron', 'preload.js'),
+    path.join(app.getAppPath(), 'dist-electron', 'preload.js'),
+    path.join(process.resourcesPath as string, 'app', 'dist-electron', 'preload.js'),
+    path.join(process.resourcesPath as string, 'dist-electron', 'preload.js')
+  ];
+  
+  console.log('Searching for preload.js in these locations:');
+  possiblePaths.forEach(p => {
+    const exists = fs.existsSync(p);
+    console.log(` - ${p} (${exists ? 'EXISTS' : 'NOT FOUND'})`);
+    if (exists) {
+      return p;
+    }
+  });
+  
+  // Return the first path that exists, or fallback to the standard one
+  const existingPath = possiblePaths.find(p => fs.existsSync(p));
+  if (existingPath) {
+    console.log(`Using preload path: ${existingPath}`);
+    return existingPath;
+  }
+  
+  console.log(`Falling back to default preload path: ${path.join(__dirname, 'preload.js')}`);
+  return path.join(__dirname, 'preload.js');
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
@@ -19,7 +55,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false, // Security best practice
       contextIsolation: true, // Security best practice
-      preload: path.join(__dirname, 'preload.js')
+      preload: getPreloadPath()
     },
     icon: path.join(getResourcePath(), 'build', 'icons', process.platform === 'win32' ? 'icon.ico' : 'icon.png')
   });

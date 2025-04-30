@@ -13,6 +13,7 @@ function cleanBuildArtifacts(rootDir) {
   const dirsToClean = [
     path.join(rootDir, 'dist'),
     path.join(rootDir, 'electron', 'dist'),
+    path.join(rootDir, 'dist-electron'),
     path.join(rootDir, 'release')
   ];
 

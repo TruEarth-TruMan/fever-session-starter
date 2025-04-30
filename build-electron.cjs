@@ -29,6 +29,34 @@ function safeRequire(modulePath) {
   }
 }
 
+// Function to copy directory contents
+function copyDirectory(source, destination) {
+  if (!fs.existsSync(source)) {
+    console.error(`Source directory not found: ${source}`);
+    return false;
+  }
+
+  if (!fs.existsSync(destination)) {
+    fs.mkdirSync(destination, { recursive: true });
+  }
+
+  const entries = fs.readdirSync(source, { withFileTypes: true });
+  
+  for (const entry of entries) {
+    const srcPath = path.join(source, entry.name);
+    const destPath = path.join(destination, entry.name);
+    
+    if (entry.isDirectory()) {
+      copyDirectory(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+      console.log(`Copied: ${srcPath} -> ${destPath}`);
+    }
+  }
+  
+  return true;
+}
+
 // Main build process
 async function buildApp() {
   try {
@@ -40,13 +68,38 @@ async function buildApp() {
     const iconDir = path.join(buildDir, 'icons');
     const distDir = path.join(rootDir, 'dist');
     const releaseDir = path.join(rootDir, 'release');
+    const electronDistDir = path.join(rootDir, 'electron', 'dist');
+    const distElectronDir = path.join(rootDir, 'dist-electron');
     
-    [buildDir, iconDir, distDir, releaseDir].forEach(dir => {
+    [buildDir, iconDir, distDir, releaseDir, distElectronDir].forEach(dir => {
       if (!fs.existsSync(dir)) {
         console.log(`Creating directory: ${dir}`);
         fs.mkdirSync(dir, { recursive: true });
       }
     });
+    
+    // Copy files from electron/dist to dist-electron
+    console.log(`Copying Electron files from ${electronDistDir} to ${distElectronDir}`);
+    if (fs.existsSync(electronDistDir)) {
+      copyDirectory(electronDistDir, distElectronDir);
+      console.log('Electron files copied successfully');
+    } else {
+      console.error(`Electron dist directory not found: ${electronDistDir}`);
+      console.log('Creating minimal preload.js in dist-electron');
+      
+      // Create minimal preload.js file to prevent errors
+      const preloadContent = `
+// Minimal preload script
+const { contextBridge } = require('electron');
+
+// Expose safe APIs
+contextBridge.exposeInMainWorld('electron', {
+  getAppVersion: () => '0.0.0',
+  getEnvironment: () => 'development'
+});
+      `;
+      fs.writeFileSync(path.join(distElectronDir, 'preload.js'), preloadContent);
+    }
     
     // Check if Vite build exists
     if (!fs.existsSync(path.join(distDir, 'index.html'))) {
@@ -90,7 +143,7 @@ async function buildApp() {
           output: "release", 
           buildResources: "build", 
         },
-        files: ["dist/**/*", "electron/**/*", "build/**/*", "main.cjs", "preload.js"]
+        files: ["dist/**/*", "electron/**/*", "build/**/*", "dist-electron/**/*", "main.cjs", "preload.js"]
       };
     }
     

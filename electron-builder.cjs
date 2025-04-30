@@ -31,6 +31,7 @@ module.exports = {
     "dist/**/*", // Built Vite app
     "electron/**/*", // Electron main process files
     "build/**/*", // Build resources
+    "dist-electron/**/*", // Compiled Electron files
     "preload.js", // Explicit include preload
     "main.cjs", // Explicit include main
     "!node_modules/**/*", // Exclude node_modules
@@ -38,7 +39,7 @@ module.exports = {
   
   // Explicitly define entry points
   extraMetadata: {
-    main: "electron/main.js"
+    main: "dist-electron/main.js"
   },
   
   // macOS specific configuration
