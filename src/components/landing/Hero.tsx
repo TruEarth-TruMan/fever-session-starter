@@ -1,15 +1,13 @@
-
 import { Button } from "@/components/ui/button"
 import { Download, Smartphone, Tablet } from "lucide-react"
 import { toast } from "sonner"
 
 export default function Hero() {
   const handleDownload = (platform: 'mac' | 'windows' | 'ios' | 'android') => {
-    // Updated download links to use a different path structure
-    // You'll need to ensure these files exist on your server
+    // Use paths that match the artifacts defined in electron-builder.cjs
     const downloadLinks = {
-      mac: 'https://feverstudio.live/installer/Fever-0.1.0-arm64-mac.zip',
-      windows: 'https://feverstudio.live/installer/Fever-0.1.0-setup.exe',
+      mac: '/release/Fever-0.1.0-arm64.zip', // Match the artifactName pattern in electron-builder.cjs
+      windows: '/release/Fever-0.1.0-setup.exe', // Match the artifactName pattern in electron-builder.cjs
     };
 
     // For mobile platforms, show coming soon toast
