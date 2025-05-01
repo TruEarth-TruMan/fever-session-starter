@@ -5,9 +5,11 @@ import { toast } from "sonner"
 
 export default function Hero() {
   const handleDownload = (platform: 'mac' | 'windows' | 'ios' | 'android') => {
+    // Updated download links to use a different path structure
+    // You'll need to ensure these files exist on your server
     const downloadLinks = {
-      mac: 'https://feverstudio.live/downloads/Fever-0.1.0-arm64-mac.zip',
-      windows: 'https://feverstudio.live/downloads/Fever-0.1.0-setup.exe',
+      mac: 'https://feverstudio.live/installer/Fever-0.1.0-arm64-mac.zip',
+      windows: 'https://feverstudio.live/installer/Fever-0.1.0-setup.exe',
     };
 
     // For mobile platforms, show coming soon toast
