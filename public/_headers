@@ -1,6 +1,4 @@
-
 # Headers for Fever installer files
 /downloads/*
   Content-Disposition: attachment
   Content-Type: application/octet-stream
-
