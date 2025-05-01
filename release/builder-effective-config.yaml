@@ -1,0 +1,57 @@
+directories:
+  output: release
+  buildResources: build
+appId: com.fever.audio
+productName: Fever
+copyright: Copyright © 2025
+files:
+  - filter:
+      - dist/**/*
+      - dist-electron/**/*
+      - electron/**/*
+      - preload.js
+      - package.json
+extraFiles: []
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icons/icon.ico
+  artifactName: Fever-${version}-setup.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icons/icon.ico
+  uninstallerIcon: build/icons/icon.ico
+  installerHeaderIcon: build/icons/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Fever
+  uninstallDisplayName: Fever ${version}
+mac:
+  category: public.app-category.music
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  artifactName: Fever-${version}-${arch}.${ext}
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
+  icon: build/icons/icon.icns
+publish: null
+electronVersion: 35.2.1

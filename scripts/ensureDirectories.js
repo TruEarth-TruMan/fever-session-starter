@@ -1,46 +1,44 @@
-
-/**
- * Ensures required directories exist for the build process
- */
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Ensures all required directories and placeholder files exist for the build process
+ */
 function ensureDirectories(rootDir) {
-  console.log('Ensuring required directories exist...');
-  
-  // Critical directories for Electron builds
+  console.log('🔧 Ensuring required directories exist...');
+
   const requiredDirs = [
     path.join(rootDir, 'build'),
     path.join(rootDir, 'build', 'icons'),
     path.join(rootDir, 'dist'),
     path.join(rootDir, 'release'),
-    path.join(rootDir, 'electron', 'dist') // For compiled Electron files
+    path.join(rootDir, 'distribution'),
+    path.join(rootDir, 'electron', 'dist'),
+    path.join(rootDir, 'dist-electron')
   ];
-  
-  requiredDirs.forEach(dir => {
+
+  requiredDirs.forEach((dir) => {
     if (!fs.existsSync(dir)) {
-      console.log(`Creating directory: ${dir}`);
       fs.mkdirSync(dir, { recursive: true });
+      console.log(`📁 Created directory: ${dir}`);
     } else {
-      console.log(`Directory already exists: ${dir}`);
+      console.log(`✅ Directory already exists: ${dir}`);
     }
   });
-  
-  // Add placeholder icons if they don't exist
+
   const iconFiles = [
     { path: path.join(rootDir, 'build', 'icons', 'icon.ico'), type: 'Windows' },
     { path: path.join(rootDir, 'build', 'icons', 'icon.icns'), type: 'macOS' },
     { path: path.join(rootDir, 'build', 'icons', 'icon.png'), type: 'PNG' }
   ];
-  
+
   iconFiles.forEach(({ path: iconPath, type }) => {
     if (!fs.existsSync(iconPath)) {
-      console.log(`Creating placeholder ${type} icon at: ${iconPath}`);
-      // Just create an empty file if it doesn't exist
       fs.writeFileSync(iconPath, '');
+      console.log(`🖼️ Created placeholder ${type} icon at: ${iconPath}`);
     }
   });
-  
+
   return true;
 }
 

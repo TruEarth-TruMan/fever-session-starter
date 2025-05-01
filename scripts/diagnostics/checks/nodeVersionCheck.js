@@ -1,38 +1,39 @@
-
-/**
- * Node.js compatibility checker
- */
 const semver = require('semver');
 
-function checkNodeVersion() {
-  console.log(`Current Node.js version: ${process.version}`);
-  
-  // Node.js v22+ requires electron-builder v26+
-  const isNodeV22Plus = semver.gte(process.version, '22.0.0');
-  
+function checkNodeVersion(requiredVersion = '16.0.0') {
+  const currentVersion = process.version.replace('v', '');
+  console.log(`Current Node.js version: ${currentVersion}`);
+
+  if (!semver.gte(currentVersion, requiredVersion)) {
+    console.error(`❌ Node.js version ${currentVersion} is too old. Requires ${requiredVersion} or higher.`);
+    return {
+      isCompatible: false,
+      requiresElectronBuilderUpdate: false
+    };
+  }
+
+  const isNodeV22Plus = semver.gte(currentVersion, '22.0.0');
   if (isNodeV22Plus) {
-    console.log('Node.js v22+ detected. Electron-builder v26+ is required.');
-    return { 
+    console.log('✅ Node.js v22+ detected. Electron-builder v26+ is required.');
+    return {
       isCompatible: true,
       requiresElectronBuilderUpdate: true
     };
   }
-  
-  // Node.js v16+ is generally safe for electron-builder
-  const isNodeV16Plus = semver.gte(process.version, '16.0.0');
-  if (isNodeV16Plus) {
-    console.log('Node.js version is compatible with electron-builder.');
-    return { 
-      isCompatible: true,
-      requiresElectronBuilderUpdate: false
-    };
-  }
-  
-  console.log('WARNING: Node.js version below v16 may cause compatibility issues.');
-  return { 
-    isCompatible: false,
+
+  console.log('✅ Node.js version is compatible with electron-builder.');
+  return {
+    isCompatible: true,
     requiresElectronBuilderUpdate: false
   };
 }
 
 module.exports = { checkNodeVersion };
+
+// Optional: exit immediately if run directly as a CLI check
+if (require.main === module) {
+  const result = checkNodeVersion('16.0.0');
+  if (!result.isCompatible) {
+    process.exit(1);
+  }
+}
