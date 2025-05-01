@@ -1,13 +1,14 @@
+
 import { Button } from "@/components/ui/button"
 import { Download, Smartphone, Tablet } from "lucide-react"
 import { toast } from "sonner"
 
 export default function Hero() {
   const handleDownload = (platform: 'mac' | 'windows' | 'ios' | 'android') => {
-    // Use paths that match the artifacts defined in electron-builder.cjs
+    // Use paths that match the production URLs
     const downloadLinks = {
-      mac: '/release/Fever-0.1.0-arm64.zip', // Match the artifactName pattern in electron-builder.cjs
-      windows: '/release/Fever-0.1.0-setup.exe', // Match the artifactName pattern in electron-builder.cjs
+      mac: '/downloads/Fever-0.1.0-arm64.zip', // Match the artifactName pattern in electron-builder.cjs
+      windows: '/downloads/Fever-0.1.0-setup.exe', // Match the artifactName pattern in electron-builder.cjs
     };
 
     // For mobile platforms, show coming soon toast
