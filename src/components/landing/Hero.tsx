@@ -19,17 +19,11 @@ export default function Hero() {
       return;
     }
     
-    // For desktop platforms
+    // For desktop platforms, use direct navigation
     const link = downloadLinks[platform];
     
-    // Create an anchor element and trigger download
-    const a = document.createElement('a');
-    a.href = link;
-    a.download = platform === 'mac' ? 'Fever-0.1.0-arm64-mac.zip' : 'Fever-0.1.0-setup.exe';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    // Open in a new tab which will trigger the browser's download behavior
+    window.open(link, '_blank');
     
     toast.success("Download started", {
       description: `Your ${platform === 'mac' ? 'macOS' : 'Windows'} download has begun.`,
