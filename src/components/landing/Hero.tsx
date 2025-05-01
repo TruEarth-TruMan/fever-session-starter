@@ -6,48 +6,35 @@ import { toast } from "sonner"
 export default function Hero() {
   const handleDownload = (platform: 'mac' | 'windows' | 'ios' | 'android') => {
     const downloadLinks = {
-      mac: 'https://feverstudio.live/download/mac/Fever-Setup-1.0.0.dmg',
-      windows: 'https://feverstudio.live/download/windows/Fever-Setup-1.0.0.exe',
-      ios: 'https://apps.apple.com/app/fever-audio/id123456789',
-      android: 'https://play.google.com/store/apps/details?id=com.fever.audioapp'
+      mac: 'https://feverstudio.live/downloads/Fever-0.1.0-arm64-mac.zip',
+      windows: 'https://feverstudio.live/downloads/Fever-0.1.0-setup.exe',
     };
 
-    const link = downloadLinks[platform];
-    
-    // For mobile platforms, redirect to store
+    // For mobile platforms, show coming soon toast
     if (platform === 'ios' || platform === 'android') {
-      window.open(link, '_blank');
+      toast.info("Coming Soon", {
+        description: `Fever for ${platform === 'ios' ? 'iOS' : 'Android'} will be available soon in the app store.`,
+        duration: 4000
+      });
       return;
     }
     
-    // For desktop platforms, check if file exists before attempting download
-    fetch(link, { method: 'HEAD' })
-      .then(response => {
-        if (response.ok) {
-          const a = document.createElement('a');
-          a.href = link;
-          a.download = `Fever-Setup-${platform === 'mac' ? 'macOS' : 'Windows'}`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          
-          toast.success("Download started", {
-            description: `Your ${platform === 'mac' ? 'macOS' : 'Windows'} download has begun.`,
-            duration: 4000
-          });
-        } else {
-          toast.error("Download currently unavailable", {
-            description: "Please check back later or contact support.",
-            duration: 4000
-          });
-        }
-      })
-      .catch(() => {
-        toast.error("Download failed", {
-          description: "Unable to download the installer. Please try again later.",
-          duration: 4000
-        });
-      });
+    // For desktop platforms
+    const link = downloadLinks[platform];
+    
+    // Create an anchor element and trigger download
+    const a = document.createElement('a');
+    a.href = link;
+    a.download = platform === 'mac' ? 'Fever-0.1.0-arm64-mac.zip' : 'Fever-0.1.0-setup.exe';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    toast.success("Download started", {
+      description: `Your ${platform === 'mac' ? 'macOS' : 'Windows'} download has begun.`,
+      duration: 4000
+    });
   };
 
   return (
@@ -85,17 +72,17 @@ export default function Hero() {
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button 
             onClick={() => handleDownload('ios')} 
-            className="w-full sm:w-auto rounded-full px-8 py-3 text-lg font-semibold bg-gradient-to-br from-fever-blue to-fever-light shadow-xl hover:from-fever-light hover:to-fever-blue transition-all focus-visible:ring-fever-blue/60 ring-2 ring-fever-blue/10 gap-2"
+            className="w-full sm:w-auto rounded-full px-8 py-3 text-lg font-semibold bg-gradient-to-br from-fever-blue/60 to-fever-light/60 shadow-xl hover:from-fever-light/70 hover:to-fever-blue/70 transition-all focus-visible:ring-fever-blue/60 ring-2 ring-fever-blue/10 gap-2"
           >
             <Smartphone size={22} />
-            Download for iOS
+            iOS (Coming Soon)
           </Button>
           <Button 
             onClick={() => handleDownload('android')} 
-            className="w-full sm:w-auto rounded-full px-8 py-3 text-lg font-semibold bg-gradient-to-br from-fever-blue to-fever-light shadow-xl hover:from-fever-light hover:to-fever-blue transition-all focus-visible:ring-fever-blue/60 ring-2 ring-fever-blue/10 gap-2"
+            className="w-full sm:w-auto rounded-full px-8 py-3 text-lg font-semibold bg-gradient-to-br from-fever-blue/60 to-fever-light/60 shadow-xl hover:from-fever-light/70 hover:to-fever-blue/70 transition-all focus-visible:ring-fever-blue/60 ring-2 ring-fever-blue/10 gap-2"
           >
             <Tablet size={22} />
-            Download for Android
+            Android (Coming Soon)
           </Button>
         </div>
       </div>
