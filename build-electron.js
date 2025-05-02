@@ -1,10 +1,6 @@
 
-#!/usr/bin/env node
-
-/**
- * Entry point for Electron build process
- * This script provides a convenient way to build your Electron app
- */
+// Entry point for Electron build process
+// This script provides a convenient way to build your Electron app
 
 console.log('Starting Fever Electron build process...');
 
