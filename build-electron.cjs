@@ -1,3 +1,4 @@
+
 #!/usr/bin/env node
 
 const builder = require('electron-builder');
@@ -37,6 +38,31 @@ function copyDirectory(source, destination) {
       ? copyDirectory(srcPath, destPath)
       : fs.copyFileSync(srcPath, destPath);
   }
+}
+
+// Verify architecture settings
+function verifyArchitectureSettings(config) {
+  if (!config) return;
+  
+  // Ensure Windows targets are explicitly set to x64
+  if (config.win && config.win.target) {
+    const targets = Array.isArray(config.win.target) ? config.win.target : [config.win.target];
+    let modified = false;
+    
+    targets.forEach(target => {
+      if (typeof target === 'object' && !target.arch) {
+        console.log('Adding explicit x64 architecture to Windows target');
+        target.arch = ['x64'];
+        modified = true;
+      }
+    });
+    
+    if (modified) {
+      console.log('Updated Windows target architecture settings');
+    }
+  }
+  
+  return config;
 }
 
 (async () => {
@@ -80,13 +106,34 @@ function copyDirectory(source, destination) {
             'preload.js',
             'main.cjs',
             'package.json'
-          ]
+          ],
+          win: {
+            target: [
+              {
+                target: "nsis",
+                arch: ["x64"]
+              }
+            ]
+          }
         };
+    
+    // Verify and potentially update architecture settings
+    config = verifyArchitectureSettings(config);
 
+    // Set specific environment variables for better compatibility
+    process.env.ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES = 'true';
+    
     console.log('Launching electron-builder...');
+    console.log(`Building for architectures: Windows ${config.win?.target?.[0]?.arch || 'default'}`);
+    
     const results = await builder.build({
       config,
-      publish: process.env.PUBLISH === 'always' ? 'always' : 'never'
+      publish: process.env.PUBLISH === 'always' ? 'always' : 'never',
+      x64: true,
+      ia32: false,
+      armv7l: false,
+      arm64: false,
+      universal: false
     });
 
     console.log('✅ Build complete! Artifacts:');

@@ -41,5 +41,15 @@ export default defineConfig(({ mode }) => ({
     },
     // Improve Electron compatibility
     emptyOutDir: true,
+  },
+  // Add specific optimizations for Electron builds
+  optimizeDeps: {
+    include: ['react', 'react-dom'],
+    exclude: ['electron']
+  },
+  esbuild: {
+    // Ensure proper target for Windows compatibility
+    target: 'es2020',
+    platform: process.env.ELECTRON === 'true' ? 'node' : 'browser',
   }
 }));

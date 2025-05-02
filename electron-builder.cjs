@@ -1,3 +1,4 @@
+
 // electron-builder.cjs
 
 module.exports = {
@@ -38,7 +39,9 @@ module.exports = {
       }
     ],
     icon: "build/icons/icon.ico",
-    artifactName: "Fever-${version}-setup.${ext}"
+    artifactName: "Fever-${version}-setup.${ext}",
+    requestedExecutionLevel: "asInvoker", // Add this for better Windows compatibility
+    signAndEditExecutable: false // Disable signing for development
   },
 
   nsis: {
@@ -91,5 +94,11 @@ module.exports = {
 
   generateUpdatesFilesForAllChannels: true,
 
-  buildDependenciesFromSource: true
+  buildDependenciesFromSource: true,
+  
+  // Add this section for better Windows compatibility
+  electronVersion: "35.2.1",
+  electronDownload: {
+    cache: ".electron-cache"
+  }
 };
