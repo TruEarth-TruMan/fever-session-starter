@@ -1,12 +1,20 @@
+
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAudioDevices } from '@/utils/audioDeviceDetection';
+import { getDeviceRecommendation } from '@/utils/deviceClassification';
 
 export interface AudioDevice {
   id: string;
   name: string;
   type: 'input' | 'output';
   isScarlettInterface?: boolean;
+  // New universal interface detection
+  isProfessionalInterface?: boolean;
+  deviceScore?: number;
+  deviceBrand?: string;
+  deviceCategory?: 'professional' | 'prosumer' | 'consumer' | 'builtin';
+  deviceFeatures?: string[];
 }
 
 export interface AudioDeviceConfig {
@@ -36,15 +44,31 @@ export const useAudioDeviceConfig = () => {
       const inputs = devices.filter(d => d.type === 'input');
       const outputs = devices.filter(d => d.type === 'output');
       
-      // Auto-select Scarlett interface if available
-      const scarlettInput = inputs.find(d => d.isScarlettInterface);
-      const scarlettOutput = outputs.find(d => d.isScarlettInterface);
+      // Smart device selection based on scoring
+      const bestInput = inputs[0]; // Already sorted by score
+      const bestOutput = outputs[0]; // Already sorted by score
+      
+      // Show recommendation for the best device found
+      if (bestInput && bestInput.deviceScore && bestInput.deviceScore > 50) {
+        const recommendation = getDeviceRecommendation({
+          score: bestInput.deviceScore,
+          category: bestInput.deviceCategory || 'consumer',
+          brand: bestInput.deviceBrand || 'Unknown',
+          features: bestInput.deviceFeatures || []
+        });
+        
+        toast({
+          title: "Audio Interface Detected",
+          description: recommendation,
+          duration: 4000,
+        });
+      }
       
       setConfig(prev => ({
         ...prev,
         devices,
-        selectedInput: scarlettInput || prev.selectedInput || inputs[0] || null,
-        selectedOutput: scarlettOutput || prev.selectedOutput || outputs[0] || null,
+        selectedInput: bestInput || prev.selectedInput || null,
+        selectedOutput: bestOutput || prev.selectedOutput || null,
         isLoading: false
       }));
     } catch (err) {

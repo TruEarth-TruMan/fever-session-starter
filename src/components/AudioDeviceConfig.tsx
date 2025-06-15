@@ -1,7 +1,8 @@
 
 import { useState } from 'react';
-import { Volume2, Mic, RefreshCw, PlayCircle } from 'lucide-react';
+import { Volume2, Mic, RefreshCw, PlayCircle, Star, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -29,6 +30,52 @@ const AudioDeviceConfig = () => {
 
   const inputs = devices.filter(d => d.type === 'input');
   const outputs = devices.filter(d => d.type === 'output');
+
+  const getCategoryIcon = (category?: string) => {
+    switch (category) {
+      case 'professional':
+        return <Award className="h-3 w-3" />;
+      case 'prosumer':
+        return <Star className="h-3 w-3" />;
+      default:
+        return null;
+    }
+  };
+
+  const getCategoryColor = (category?: string) => {
+    switch (category) {
+      case 'professional':
+        return 'bg-green-600 text-white';
+      case 'prosumer':
+        return 'bg-blue-600 text-white';
+      case 'consumer':
+        return 'bg-yellow-600 text-white';
+      default:
+        return 'bg-gray-600 text-white';
+    }
+  };
+
+  const formatDeviceName = (device: any) => {
+    const hasScore = device.deviceScore && device.deviceScore > 0;
+    return (
+      <div className="flex items-center justify-between w-full">
+        <span className="truncate">{device.name}</span>
+        <div className="flex items-center gap-1 ml-2">
+          {device.deviceCategory && (
+            <Badge className={cn("text-xs px-1 py-0", getCategoryColor(device.deviceCategory))}>
+              {getCategoryIcon(device.deviceCategory)}
+              {device.deviceBrand || device.deviceCategory}
+            </Badge>
+          )}
+          {hasScore && (
+            <span className="text-xs text-muted-foreground">
+              ({device.deviceScore})
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const handleTestInput = async () => {
     if (!selectedInput) return;
@@ -96,13 +143,13 @@ const AudioDeviceConfig = () => {
                 onValueChange={selectInput}
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-[300px]">
+                <SelectTrigger className="w-[400px]">
                   <SelectValue placeholder="Select input device" />
                 </SelectTrigger>
                 <SelectContent>
                   {inputs.map(device => (
                     <SelectItem key={device.id} value={device.id}>
-                      {device.name}
+                      {formatDeviceName(device)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -124,6 +171,15 @@ const AudioDeviceConfig = () => {
                 </span>
               </div>
             )}
+            {selectedInput && selectedInput.deviceFeatures && selectedInput.deviceFeatures.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {selectedInput.deviceFeatures.map((feature, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {feature}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -137,13 +193,13 @@ const AudioDeviceConfig = () => {
                 onValueChange={selectOutput}
                 disabled={isLoading}
               >
-                <SelectTrigger className="w-[300px]">
+                <SelectTrigger className="w-[400px]">
                   <SelectValue placeholder="Select output device" />
                 </SelectTrigger>
                 <SelectContent>
                   {outputs.map(device => (
                     <SelectItem key={device.id} value={device.id}>
-                      {device.name}
+                      {formatDeviceName(device)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -158,6 +214,15 @@ const AudioDeviceConfig = () => {
                 Test Output
               </Button>
             </div>
+            {selectedOutput && selectedOutput.deviceFeatures && selectedOutput.deviceFeatures.length > 0 && (
+              <div className="flex gap-1 flex-wrap">
+                {selectedOutput.deviceFeatures.map((feature, index) => (
+                  <Badge key={index} variant="outline" className="text-xs">
+                    {feature}
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 
 import { AudioDevice } from '@/types/electron';
 import type { AudioDevice as ConfigAudioDevice } from '@/hooks/useAudioDeviceConfig';
+import { classifyAudioDevice } from './deviceClassification';
 
 /**
  * Detects audio devices using the browser's MediaDevices API
@@ -14,13 +15,21 @@ export async function getAudioDevices(): Promise<ConfigAudioDevice[]> {
       // Use Electron's IPC for audio interface detection if available
       const devices = await window.electron.detectAudioInterfaces();
       
-      // Convert Electron AudioDevice to ConfigAudioDevice format
-      return devices.map(device => ({
-        id: device.id,
-        name: device.name,
-        type: device.isInput ? 'input' : 'output',
-        isScarlettInterface: device.name.toLowerCase().includes('scarlett') || device.name.toLowerCase().includes('focusrite')
-      }));
+      // Convert Electron AudioDevice to ConfigAudioDevice format with classification
+      return devices.map(device => {
+        const classification = classifyAudioDevice(device.name);
+        return {
+          id: device.id,
+          name: device.name,
+          type: device.isInput ? 'input' : 'output',
+          isScarlettInterface: device.name.toLowerCase().includes('scarlett') || device.name.toLowerCase().includes('focusrite'),
+          isProfessionalInterface: classification.category === 'professional',
+          deviceScore: classification.score,
+          deviceBrand: classification.brand,
+          deviceCategory: classification.category,
+          deviceFeatures: classification.features
+        };
+      });
     }
     
     // Fallback to browser MediaDevices API
@@ -38,15 +47,24 @@ export async function getAudioDevices(): Promise<ConfigAudioDevice[]> {
       .map(device => {
         const isInput = device.kind === 'audioinput';
         const deviceName = device.label || (isInput ? `Microphone ${device.deviceId.slice(0, 5)}...` : `Speaker ${device.deviceId.slice(0, 5)}...`);
+        const classification = classifyAudioDevice(deviceName);
         
         return {
           id: device.deviceId,
           name: deviceName,
           type: isInput ? 'input' : 'output',
-          // Check if it's a Scarlett interface by name
-          isScarlettInterface: deviceName.toLowerCase().includes('scarlett') || deviceName.toLowerCase().includes('focusrite')
+          // Legacy support for Scarlett-specific detection
+          isScarlettInterface: deviceName.toLowerCase().includes('scarlett') || deviceName.toLowerCase().includes('focusrite'),
+          // New universal classification
+          isProfessionalInterface: classification.category === 'professional',
+          deviceScore: classification.score,
+          deviceBrand: classification.brand,
+          deviceCategory: classification.category,
+          deviceFeatures: classification.features
         };
-      });
+      })
+      // Sort by score (highest first) to prioritize better devices
+      .sort((a, b) => (b.deviceScore || 0) - (a.deviceScore || 0));
       
     return audioDevices;
   } catch (error) {
