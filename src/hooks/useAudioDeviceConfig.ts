@@ -3,19 +3,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAudioDevices } from '@/utils/audioDeviceDetection';
 import { getDeviceRecommendation } from '@/utils/deviceClassification';
-
-export interface AudioDevice {
-  id: string;
-  name: string;
-  type: 'input' | 'output';
-  isScarlettInterface?: boolean;
-  // New universal interface detection
-  isProfessionalInterface?: boolean;
-  deviceScore?: number;
-  deviceBrand?: string;
-  deviceCategory?: 'professional' | 'prosumer' | 'consumer' | 'builtin';
-  deviceFeatures?: string[];
-}
+import { AudioDevice } from '@/types/electron';
 
 export interface AudioDeviceConfig {
   selectedInput: AudioDevice | null;

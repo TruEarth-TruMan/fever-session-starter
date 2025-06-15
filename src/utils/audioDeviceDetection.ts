@@ -1,6 +1,5 @@
 
 import { AudioDevice } from '@/types/electron';
-import type { AudioDevice as ConfigAudioDevice } from '@/hooks/useAudioDeviceConfig';
 import { classifyAudioDevice } from './deviceClassification';
 
 /**
@@ -8,20 +7,20 @@ import { classifyAudioDevice } from './deviceClassification';
  * This is a renderer-side replacement for Electron's desktopCapturer
  * @returns Promise<AudioDevice[]> Array of detected audio devices
  */
-export async function getAudioDevices(): Promise<ConfigAudioDevice[]> {
+export async function getAudioDevices(): Promise<AudioDevice[]> {
   try {
     // Check if we're in Electron with access to IPC
     if (window.electron?.detectAudioInterfaces) {
       // Use Electron's IPC for audio interface detection if available
       const devices = await window.electron.detectAudioInterfaces();
       
-      // Convert Electron AudioDevice to ConfigAudioDevice format with classification
+      // Convert Electron AudioDevice with classification
       return devices.map(device => {
         const classification = classifyAudioDevice(device.name);
         return {
           id: device.id,
           name: device.name,
-          type: device.isInput ? 'input' : 'output',
+          type: device.isInput ? 'input' as const : 'output' as const,
           isScarlettInterface: device.name.toLowerCase().includes('scarlett') || device.name.toLowerCase().includes('focusrite'),
           isProfessionalInterface: classification.category === 'professional',
           deviceScore: classification.score,
@@ -42,7 +41,7 @@ export async function getAudioDevices(): Promise<ConfigAudioDevice[]> {
     const devices = await navigator.mediaDevices.enumerateDevices();
     
     // Filter and map to our AudioDevice interface
-    const audioDevices: ConfigAudioDevice[] = devices
+    const audioDevices: AudioDevice[] = devices
       .filter(device => device.kind === 'audioinput' || device.kind === 'audiooutput')
       .map(device => {
         const isInput = device.kind === 'audioinput';
@@ -52,7 +51,7 @@ export async function getAudioDevices(): Promise<ConfigAudioDevice[]> {
         return {
           id: device.deviceId,
           name: deviceName,
-          type: isInput ? 'input' : 'output',
+          type: isInput ? 'input' as const : 'output' as const,
           // Legacy support for Scarlett-specific detection
           isScarlettInterface: deviceName.toLowerCase().includes('scarlett') || deviceName.toLowerCase().includes('focusrite'),
           // New universal classification

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   Dialog, 
@@ -12,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useAudioEngine } from '@/hooks/useAudioEngine';
 import { getAudioDevices } from '@/utils/audioDeviceDetection';
 import { getDeviceRecommendation } from '@/utils/deviceClassification';
-import type { AudioDevice as ConfigAudioDevice } from '@/hooks/useAudioDeviceConfig';
+import { AudioDevice } from '@/types/electron';
 
 interface InterfaceDetectionProps {
   onDetected: () => void;
@@ -24,7 +23,7 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
   const [detected, setDetected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
-  const [detectedDevice, setDetectedDevice] = useState<ConfigAudioDevice | null>(null);
+  const [detectedDevice, setDetectedDevice] = useState<AudioDevice | null>(null);
   
   useEffect(() => {
     const detectInterfaces = async () => {
@@ -78,7 +77,7 @@ const InterfaceDetection = ({ onDetected }: InterfaceDetectionProps) => {
         brand: detectedDevice.deviceBrand || 'Unknown',
         features: detectedDevice.deviceFeatures || []
       });
-      return `${detectedDevice.brand || 'Professional'} audio interface detected! ${recommendation}`;
+      return `${detectedDevice.deviceBrand || 'Professional'} audio interface detected! ${recommendation}`;
     }
     return "No professional audio interface detected. You can continue with system audio or connect an interface.";
   };
